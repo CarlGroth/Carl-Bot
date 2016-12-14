@@ -1,0 +1,7 @@
+logs
+__pycache__
+.vscode
+sensitivedata.py
+weather.py
+xdman.py
+responses.py
