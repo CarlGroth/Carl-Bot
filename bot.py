@@ -39,7 +39,6 @@ def google_search(search_term, api_key, cse_id, **kwargs):
 
 
 
-
 class CarlBot(discord.Client):
     def __init__(self):
         super().__init__()
@@ -74,7 +73,8 @@ class CarlBot(discord.Client):
         finally:
             loop.close()
 
-
+    def is_carl():
+        return message.author.id == CARL_DISCORD_ID
 
     async def on_ready(self):
         print('connected!\n')
