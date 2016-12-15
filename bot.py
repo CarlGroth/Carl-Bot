@@ -802,8 +802,6 @@ class CarlBot(discord.Client):
             elif command == 'd':
                 #if message.author.id != CARL_DISCORD_ID:
                 #    return
-                app_id = '3177862a'
-                app_key = '7b0fd37d75535d00fb0d5fa6c90cf81d'
                 language = 'en'
                 try:
                     url = 'https://od-api.oxforddictionaries.com/api/v1/entries/' + language + '/' + message.content[3:].lower()
