@@ -17,6 +17,7 @@ from responses import *
 from sensitivedata import *
 import datetime
 import markovify
+from fuzzywuzzy import fuzz
 
 #comments are for pussies
 client = discord.Client()
@@ -103,6 +104,19 @@ class CarlBot(discord.Client):
         timedmsg = await self.send_message(channel, message_content)
         await self.delete_message(ogmsg)
 
+    async def on_member_update(self, before, after):
+        if before.nick != after.nick:
+            await self.send_message(discord.Object(id="249336368067510272"), ":spy: **{0}#{1}** changed their nickname:\n**Before:** {2}\n**+After:** {3}".format(before.name, before.discriminator, before.nick, after.nick))
+        elif before.roles != after.roles:
+            if len(before.roles) < len(after.roles):
+                #role added
+                s = set(before.roles)
+                newrole = [x for x in after.roles if x not in s]
+                await self.send_message(discord.Object(id="249336368067510272"), ":warning: **{}** had the role **{}** added.".format(before.display_name, newrole[0].name))
+            else:
+                s = set(after.roles)
+                newrole = [x for x in before.roles if x not in s]
+                await self.send_message(discord.Object(id="249336368067510272"), ":warning: **{}** had the role **{}** removed.".format(before.display_name, newrole[0].name))
     async def on_member_join(self, member):
         await self.send_message(discord.Object(id='249336368067510272'), ":white_check_mark: **{0}#{1}** *({2})*Joined the server at `{3}`<@{4}> <@{5}> :white_check_mark:".format(member.name, member.discriminator, member.id, time.strftime("%Y-%m-%d %H:%M:%S (central carl time)."), CARL_DISCORD_ID, "158370770068701184"))
     async def on_member_remove(self, member):
@@ -128,7 +142,6 @@ class CarlBot(discord.Client):
 
     async def on_message_edit(self, before, after):
         if before.channel.id == "267085455047000065":
-            print("Hello, this shouldnt be happening")
             return
         if before.channel.is_private:
             return
@@ -254,6 +267,8 @@ class CarlBot(discord.Client):
                     return
                 except ValueError:
                     return
+            elif command == "orange":
+                await self.send_message(message.channel, message.server.icon_url)
             elif command in ['eu', 'na']:
                 euRole = discord.utils.get(message.server.roles, name='EU')
                 naRole = discord.utils.get(message.server.roles, name='NA')
@@ -292,7 +307,6 @@ class CarlBot(discord.Client):
                 tagreturn = ' '.join(args[2:])
                 taglist = self.tags
                 if args[0] == 'list':
-                    
                     d = ', '.join(sorted(list(self.tags.keys())))
                     if len(d) < 1900:
                         await self.send_message(message.author, d)
@@ -318,11 +332,43 @@ class CarlBot(discord.Client):
                         print(len(firstmessage), len(secondmessage))
                         await self.send_message(message.author, firstsend)
                         await self.send_message(message.author, secondsend)
+                elif args[0] == "search":
+                    if len(args) < 2:
+                        return
+                    query = re.sub("[^a-z0-9_-]", "", args[1].lower())
+                    tagreturn = ""
+                    bad_coding_practice_variable = ""
+                    i = 1
+                    for tag in taglist:
+                        if fuzz.partial_ratio(query, tag) > 70:
+                            if i <= 15:
+                                tagreturn += "{}. {}\n".format(i, tag)
+                                bad_coding_practice_variable += "{}\n".format(tag)
+                                i += 1
+                            else:
+                                i += 1
+                        #elif fuzz.partial_ratio(query, tag) > 75:
+                        #    tagreturn75 += "{}\n".format(tag)
+                    if len(tagreturn) == 0:
+                        await self.send_message(message.channel, "Sorry, couldn't find any matching tags.")
+                    else:
+                        em = discord.Embed(title="Search results (80+):", description=tagreturn, colour=0xffffff)
+                        em.set_author(name=message.author.name, icon_url=message.author.avatar_url, url=message.author.avatar_url)
+                        #em.add_field(name="Results (75+)", value=tagreturn75, inline=True)
+                        em.set_footer(text="{} results. (page {}/{})".format(i-1, 1, math.ceil((i-1)/15)))
+                        await self.send_message(message.channel, embed=em)
+                        def check(mesg):
+                            return True
+                        msg = await self.wait_for_message(author=message.author, check=check)
+                        if msg.content.isdigit():
+                            listoflines = bad_coding_practice_variable.split('\n')
+                            print(listoflines[int(msg.content)-1])
+                            await self.send_message(message.channel, self.tags[listoflines[int(msg.content)-1]])
                 elif args[0] == "+=":
                     tagname = re.sub("[^a-z0-9_-]", "", args[1].lower())
                     content = message.content[(9+len(args[1])):]
                     if len(args) <= 2:
-                        await self.timed_message(message.channel, message, "<:FailFish:235926308071276555>")
+                        await self.send_message(message.channel, "<:FailFish:235926308071276555>")
                         return
                     if (len(content) + len(self.tags[tagname])) < 2000:
                         try:
@@ -335,7 +381,7 @@ class CarlBot(discord.Client):
                         await self.send_message(message.channel, "that would make the tag too big, retard.")
                 elif args[0] == '+':
                     if len(args) <= 2:
-                        await self.timed_message(message.channel, message, "<:FailFish:235926308071276555>")
+                        await self.send_message(message.channel, "<:FailFish:235926308071276555>")
                         return
                     if args[2] == 'list':
                         await self.send_message(messag.channel, "Nice try, motherfucker.")
@@ -346,14 +392,14 @@ class CarlBot(discord.Client):
 
                         await self.send_message(message.channel, "Tag already exists. Replace or add to tag? (y/n/a)")
                         msg = await self.wait_for_message(author=message.author, check=check)
-                        if msg.content == 'y':
+                        if msg.content.lower() == 'y':
                             tagname = re.sub("[^a-z0-9_-]", "", args[1].lower())
                             self.tags[tagname] = message.content[(7+len(args[1])):]
                             write_json('taglist.json', self.tags)
                             await self.send_message(message.channel, "Tag succesfully replaced.")
-                        elif msg.content == 'n':
+                        elif msg.content.lower() == 'n':
                             await self.send_message(message.channel, "Tag not replaced.")
-                        elif msg.content == 'a':
+                        elif msg.content.lower() == 'a':
                             tagname = re.sub("[^a-z0-9_-]", "", args[1].lower())
                             content = message.content[(8+len(args[1])):]
                             if (len(content) + len(self.tags[tagname])) < 2000:
@@ -371,10 +417,10 @@ class CarlBot(discord.Client):
                             return
                         self.tags[tagname] = message.content[(7+len(args[1])):]
                         write_json('taglist.json', self.tags)
-                        await self.timed_message(message.channel, message, "tag `{0}` added".format(tagname))
+                        await self.send_message(message.channel, "tag `{0}` added".format(tagname))
                     
                     else:
-                        await self.timed_message(message.channel, message, "too long <:gachiGASM:234404899511599104>")
+                        await self.send_message(message.channel, "too long <:gachiGASM:234404899511599104>")
                 elif args[0] in ['-', 'del']:
                     tagname = args[1]
                     if tagname in taglist:
@@ -455,7 +501,7 @@ class CarlBot(discord.Client):
             elif command == 'bl':
                 if message.author.id != CARL_DISCORD_ID:
                     return
-                if message.mentions == []:
+                if not message.mentions:
                     return
                 if args[0] in ['+', 'add']:
                     self.blacklist[message.mentions[0].id] = message.mentions[0].name
@@ -469,14 +515,14 @@ class CarlBot(discord.Client):
             elif command == 'wl':
                 if message.author.id != CARL_DISCORD_ID:
                     return
-                if message.mentions == []:
+                if not message.mentions:
                     return
                 if args[0] in ['+', 'add']:
                     self.whitelist[message.mentions[0].id] = message.mentions[0].id
                     write_json('whitelist.json', self.whitelist)
                     await self.send_message(discord.Object(id='249336368067510272'), "{} is now whitelisted.".format(message.mentions[0].name))
                 elif args[0] in ['-', 'del']:
-                    if message.mentions[0] in self.whitelist:
+                    if message.mentions[0].id in self.whitelist:
                         del self.whitelist[message.mentions[0].id]
                         write_json('whitelist.json', self.whitelist)
                         await self.send_message(discord.Object(id='249336368067510272'), "{} is no longer whitelisted.".format(message.mentions[0].name))
@@ -488,7 +534,7 @@ class CarlBot(discord.Client):
                         await self.ban(mention, delete_message_days=0)
                         bannedusers.append("{}, ".format(message.mentions[i].name))
                         i += 1
-                    await self.send_message(message.channel, "{} Just banned {}".format(message.author, ', '.join(bannedusers)))
+                    await self.send_message(message.channel, "{} Just banned {}.".format(message.author, ', '.join(bannedusers)))
             elif command == 'r':
                 score = 100 * self.retard[message.mentions[0].id]/self.postcount[message.mentions[0].id]
                 #if message.author.id != CARL_DISCORD_ID:
@@ -530,104 +576,84 @@ class CarlBot(discord.Client):
             elif command == 'bio':
                 #if message.author.id != CARL_DISCORD_ID:
                 #    return
-                if "@" in msg[:10]:
-                    try:
-                        xdd = ''.join(args[0])
-                        namedude = re.sub("[^0-9]", "", xdd)
-                        print(namedude)
-                        if len(self.bio[namedude]) < 1750:
-                            await self.timed_message(message.channel, message, "Bio for {0}:\n{1}".format(message.mentions[0], self.bio[namedude]))
-                        else:
-                            listOfLines = self.bio[namedude]
-                            listOfLines = listOfLines.splitlines()
-                            firstmessage = ""
-                            secondmessage = ""
-                            thirdmessage = ""
-                            for line in listOfLines:
-                                if len(firstmessage) < 1900:
-                                    firstmessage += "{}\n".format(line)
-                                elif len(secondmessage) < 1900:
-                                    secondmessage += "{}\n".format(line)
-                                elif len(thirdmessage) < 1900:
-                                    thirdmessage += "{}\n".format(line)
-                            print(len(firstmessage))
-                            print(len(secondmessage))
-                            await self.send_message(message.channel, "**Bio for {0}:**\n{1}".format(message.mentions[0].name, firstmessage))
-                            await self.send_message(message.channel, secondmessage)
-                            if thirdmessage != "":
-                                await self.send_message(message.channel, thirdmessage)
-                    except KeyError:
-                        print("bio Keyerror triggered")
-                        return
-                try:
+                premium_member = False
+                if message.mentions:
+                    user = message.mentions[0]
+                else:
+                    user = message.author
+                if user.id in self.whitelist:
+                    premium_member = True
+                if len(args) == 1 and not message.mentions:
+                    await self.send_message(message.channel, "Empty bio <:FailFish:235926308071276555>")
+                if args and not message.mentions:
                     if args[0] == '+':
-                        bioreturn = ' '.join(args)
-                        #namedude = ''.join(args[0][1:-1])
-                        print("message == mentions", bioreturn)
-                        if len(args) == 1:
-                            await self.timed_message(message.channel, message, "Empty bio <:FailFish:235926308071276555>")
-                        if message.author.id in ['158370770068701184', CARL_DISCORD_ID]:
-                            print(args[1:])
-                            self.bio[message.author.id] = message.content[7:]
-                            write_json('bio.json', self.bio)
-                            await self.timed_message(message.channel, message, "bio `{0}` updated.".format(message.author))
-                        elif len(message.content) < 1500:
-                            self.bio[message.author.id] = message.content[7:]
-                            write_json('bio.json', self.bio)
-                            await self.timed_message(message.channel, message, "bio `{0}` added".format(message.author))
+                        if message.author.id in self.bio:
+                            def check(mesg):
+                                return True
+                            await self.send_message(message.channel, "Bio already exists. **__r__**eplace, **__c__**ancel or **__a__**dd to? (r/c/a)")
+                            msg = await self.wait_for_message(author=message.author, check=check)
+                            if msg.content.lower() in ['r', 'y', 'yes', 'replace']:
+                                self.bio[message.author.id] = message.clean_content[7:]
+                                write_json('bio.json', self.bio)
+                                await self.send_message(message.channel, "Bio succesfully replaced.")
+                            elif msg.content.lower() in ['c', 'n', 'no', 'cancel']:
+                                await self.send_message(message.channel, "Bio unchanged.")
+                            elif msg.content.lower() == 'a':
+                                if premium_member:
+                                    self.bio[message.author.id] += "\n{}".format(message.clean_content[7:])
+                                    write_json('bio.json', self.bio)
+                                elif not premium_member and (len(message.clean_content[7:]) + len(self.bio[message.author.id])) < 2000:
+                                    self.bio[message.author.id] += "\n{}".format(message.clean_content[7:])
+                                    write_json('bio.json', self.bio)
+                                else:
+                                    return
+                                await self.send_message(message.channel, "`{0}` was appended to {1.name}'s bio.".format(message.clean_content[7:], message.author))
                         else:
-                            await self.timed_message(message.channel, message, "too long <:gachiGASM:234404899511599104>")
+                            if len(message.content) < 1750 or premium_member:
+                                self.bio[message.author.id] = message.clean_content[7:]
+                                write_json('bio.json', self.bio)
+                                await self.timed_message(message.channel, message, "**{}'s** bio was added".format(message.author))
                     elif args[0] == "+=":
                         if message.author.id not in self.whitelist:
-                            if len(args) == 1:
-                                await self.timed_message(message.channel, message, "retard <:FailFish:235926308071276555>")
-                            if (len(message.content[8:]) + len(self.bio[message.author.id])) < 2000:
+                            if (len(message.clean_content[8:]) + len(self.bio[message.author.id])) < 2000:
                                 try:
-                                    self.bio[message.author.id] += "\n{}".format(message.content[8:])
+                                    self.bio[message.author.id] += "\n{}".format(message.clean_content[8:])
                                 except KeyError:
-                                    self.bio[message.author.id] = "{}".format(message.content[8:])
+                                    self.bio[message.author.id] = "{}".format(message.clean_content[8:])
                                 write_json('bio.json', self.bio)
-                                await self.send_message(message.channel, "`{0}` was appended to {1.name}'s bio.".format(message.content[8:], message.author))
+                                await self.send_message(message.channel, "`{0}` was appended to {1.name}'s bio.".format(message.clean_content[8:], message.author))
                             else:
                                 await self.send_message(message.channel, "Too long")
                         else:
                             if len(args) == 1:
                                 await self.timed_message(message.channel, message, "retard <:FailFish:235926308071276555>")
-                            if (len(message.content[8:]) + len(self.bio[message.author.id])) < 5700:
-                                try:
-                                    self.bio[message.author.id] += "\n{}".format(message.content[8:])
-                                except KeyError:
-                                    self.bio[message.author.id] = "{}".format(message.content[8:])
-                                write_json('bio.json', self.bio)
-                                await self.send_message(message.channel, "`{0}` was appended to {1.name}'s bio.".format(message.content[8:], message.author))
-                            else:
-                                await self.send_message(message.channel, "Too long (yes, even for special snowflakes like you)")
-                except IndexError:
-                    bioname = message.author.id
+                            try:
+                                self.bio[message.author.id] += "\n{}".format(message.clean_content[8:])
+                            except KeyError:
+                                self.bio[message.author.id] = "{}".format(message.clean_content[8:])
+                            write_json('bio.json', self.bio)
+                            await self.send_message(message.channel, "`{0}` was appended to {1.name}'s bio.".format(message.clean_content[8:], message.author))
+                else:
+                    bioname = user.id
                     print(bioname)
                     if bioname in self.bio:
                         if len(self.bio[bioname]) < 1750:
                             print("hey, what the fuck")
-                            await self.timed_message(message.channel, message, "Bio for {0}:\n{1}".format(message.author,self.bio[bioname]))
+                            await self.send_message(message.channel, "Bio for {0}:\n{1}".format(message.author, self.bio[bioname]))
                         else:
                             listOfLines = self.bio[bioname]
                             listOfLines = listOfLines.splitlines()
-                            firstmessage = ""
-                            secondmessage = ""
-                            thirdmessage = ""
+                            tempmessage = "**Bio for {0}:**\n".format(user.display_name)
+                            finalmessage = []
                             for line in listOfLines:
-                                if len(firstmessage) < 1900:
-                                    firstmessage += "{}\n".format(line)
-                                elif len(secondmessage) < 1900:
-                                    secondmessage += "{}\n".format(line)
-                                elif len(thirdmessage) < 1900:
-                                    thirdmessage += "{}\n".format(line)
-                            print(len(firstmessage))
-                            print(len(secondmessage))
-                            await self.send_message(message.channel, "**Bio for {0}:**\n{1}".format(message.author.display_name, firstmessage))
-                            await self.send_message(message.channel, secondmessage)
-                            if thirdmessage != "":
-                                await self.send_message(message.channel, thirdmessage)
+                                if len(tempmessage) < 1800:
+                                    tempmessage += "{}\n".format(line)
+                                else:
+                                    finalmessage.append(tempmessage)
+                                    tempmessage = ""
+                            finalmessage.append(tempmessage)
+                            for x in finalmessage:
+                                await self.send_message(message.channel, x)
                     else:
                         print(bioname)
                         await self.timed_message(message.channel, message, "User has not set a bio\nTo set a bio use `!bio +`, no mention required")
