@@ -12,11 +12,11 @@ import requests
 import statistics
 import string
 import re
+import markovify
 from googleapiclient.discovery import build
 from responses import *
 from sensitivedata import *
 from datetime import datetime, timedelta
-import markovify
 from fuzzywuzzy import fuzz
 
 #comments are for pussies
@@ -105,6 +105,9 @@ class CarlBot(discord.Client):
         timedmsg = await self.send_message(channel, message_content)
         await self.delete_message(ogmsg)
 
+    async def on_member_ban(self, member):
+        await self.send_message(discord.Object(id="207943928018632705"), "**{}** was just banned from the server.".format(member.display_name))
+
     async def on_member_update(self, before, after):
         if before.nick != after.nick:
             await self.send_message(discord.Object(id="249336368067510272"), ":spy: **{0}#{1}** changed their nickname:\n**Before:** {2}\n**+After:** {3}".format(before.name, before.discriminator, before.nick, after.nick))
@@ -131,10 +134,10 @@ class CarlBot(discord.Client):
             return
         if message.clean_content.startswith(self.prefix):
             return
-        if message.author.id == "155922062832041984":
-            destination = message.channel
-        else:
-            destination = discord.Object(id='249336368067510272')
+        if message.author.id == "106429844627169280":
+            if message.content.startswith("++"):
+                return
+        destination = discord.Object(id='249336368067510272')
         poststring = ":x: `{1}` **{0}** Deleted their message:  ```{2}``` in `{3}`".format(message.author.name, time.strftime("%H:%M:%S"), message.clean_content, message.channel)
         if message.attachments:
             poststring += "\n{}".format(message.attachments[0]['url'])
@@ -150,6 +153,9 @@ class CarlBot(discord.Client):
             return
         if before.author.id == self.user.id:
             return
+        if before.author.id == "106429844627169280":
+            if before.content.startswith("++"):
+                return
         await self.send_message(discord.Object(id='249336368067510272'), ":pencil2: `{}`, **{}** edited their message:\n**Before:** {}\n**+After:** {}".format(time.strftime("%H:%M:%S"), before.author.name, before.clean_content, after.clean_content))
 
 
@@ -158,6 +164,7 @@ class CarlBot(discord.Client):
             f.write("{}\n".format(message.clean_content))
     
     async def on_message(self, message):
+        #print(message.clean_content)
         if message.author == self.user:
             return
         if message.channel.is_private:
@@ -215,15 +222,15 @@ class CarlBot(discord.Client):
                     await asyncio.sleep(0.1)
                     await self.edit_message(xd, embed=em_error)
                 except ValueError:
-                    await self.timed_message(message.channel, message, "Not even a number")
+                    await self.send_message(message.channel, "Not even a number")
             elif command == 'ban':
                 if message.author.id == CARL_DISCORD_ID:
                     if message.mentions[0] == self.user:
-                        await self.timed_message(message.channel, message, "I'm sorry, Carl. I'm afraid I can't do that.")
+                        await self.send_message(message.channel, "I'm sorry, Carl. I'm afraid I can't do that.")
                     else:
-                        await self.timed_message(message.channel, message, "banned user {}.".format(args[0]))
+                        await self.send_message(message.channel, "banned user {}.".format(args[0]))
                 else:
-                    await self.timed_message(message.channel, message, "Nope")
+                    await self.send_message(message.channel, "Nope")
             elif command in ['weather', 'temp', 'temperature']:
                 user = message.author
                 if len(args) == 0:
@@ -234,12 +241,16 @@ class CarlBot(discord.Client):
                         return
                 else:
                     city = ' '.join(args)
-                    if args[0] == "home":
+                    if args[0] == "home" and len(args) > 1:
                         home = ''.join(args[1:])
                         self.home[user.id] = home
                         write_json('weather.json', self.home)
                         await self.send_message(message.channel, "Home set to: **{}**".format(home))
                         return
+                    elif args[0] == "home" and len(args) == 1:
+                        await self.send_message(message.channel, "haha very funny joke! :)")
+                        return
+                        
                 r = requests.get('http://api.openweathermap.org/data/2.5/weather?q='+city+weatherkey)
                 json_object = r.json()
                 temp_k = float(json_object['main']['temp'])
@@ -260,7 +271,7 @@ class CarlBot(discord.Client):
                     city = int(city)
                     CtoF = city * (9/5) + 32
                     FtoC = (city - 32) * (5/9)
-                    await self.timed_message(message.channel, message, "{0}°C is {1:.1f}°F\n{0}°F is {2:.1f}°C".format(city, CtoF, FtoC))
+                    await self.send_message(message.channel, "{0}°C is {1:.1f}°F\n{0}°F is {2:.1f}°C".format(city, CtoF, FtoC))
                 except ValueError:
                     await self.send_message(message.channel, embed=em)
             
@@ -316,7 +327,7 @@ class CarlBot(discord.Client):
                         results.append(diceRoll)
                     median = statistics.median(results)
                     mean = statistics.mean(results)
-                    await self.timed_message(message.channel, message, 
+                    await self.send_message(message.channel, 
                     "You rolled **{0}** **{1}-sided** dice, results:{2}\nMedian:**{3}**, mean:**{4:.2f}**".format(rolls, sides, results, median, mean))
                 except discord.HTTPException:
                     return
@@ -341,7 +352,7 @@ class CarlBot(discord.Client):
                 choices = args
                 choices = ' '.join(choices)
                 choices = choices.split(",")
-                await self.timed_message(message.channel, message, random.choice(choices))
+                await self.send_message(message.channel, random.choice(choices))
 
             elif command == 'tag':
                 if message.mentions != []:
@@ -382,7 +393,7 @@ class CarlBot(discord.Client):
                     bad_coding_practice_variable = ""
                     i = 1
                     for tag in taglist:
-                        if fuzz.partial_ratio(query, tag) > 70:
+                        if fuzz.partial_ratio(query, tag) > 80:
                             if i <= 15:
                                 tagreturn += "{}. {}\n".format(i, tag)
                                 bad_coding_practice_variable += "{}\n".format(tag)
@@ -469,21 +480,21 @@ class CarlBot(discord.Client):
                     if tagname in taglist:
                         del taglist[tagname]
                         write_json('taglist.json', self.tags)
-                        await self.timed_message(message.channel, message, "tag `{0}` deleted".format(tagname))
+                        await self.send_message(message.channel, "tag `{0}` deleted".format(tagname))
                     else:
-                        await self.timed_message(message.channel, message, "tag `{0}` not found".format(tagname))
+                        await self.send_message(message.channel, "tag `{0}` not found".format(tagname))
                 else:
                     tagname = args[0].lower()
                     if tagname in self.tags:
-                        await self.timed_message(message.channel, message, self.tags[tagname])
+                        await self.send_message(message.channel, self.tags[tagname])
                     else:
-                        await self.timed_message(message.channel, message, "No such tag")
+                        await self.send_message(message.channel, "No such tag")
             elif command == 'm':
                 if message.author.id == CARL_DISCORD_ID:
                     await self.send_message(message.channel, "{}".format(eval(message.content[3:])))
             elif command == 'avatar':
-                if message.author.id != CARL_DISCORD_ID:
-                    return
+                #if message.author.id != CARL_DISCORD_ID:
+                #    return
                 if message.attachments:
                     avatar = message.attachments[0]['url']
                 else:
@@ -496,7 +507,7 @@ class CarlBot(discord.Client):
                     print(e)
             elif command == 'retard':
                 if len(args) == 0:
-                    await self.timed_message(message.channel, message, "You sure are.")
+                    await self.send_message(message.channel, "You sure are.")
                 elif args[0].lower() in ['leaderboard', 'leaderboards', 'top', 'highscore', 'highscores', 'hiscores']:
                     leaderboard = self.retard
                     post_this = "**Current standings:**\n"
@@ -512,7 +523,7 @@ class CarlBot(discord.Client):
                         else:
                             continue
                     post_this += "**{0}** coins in total spread across **{1}** retards.".format(sum(self.retard.values()),len(self.retard))
-                    await self.timed_message(message.channel, message, post_this)
+                    await self.send_message(message.channel, post_this)
                 try:
                     userID = ''.join(message.mentions[0].id)
                     userID = re.sub("[^0-9]", "", userID)
@@ -521,17 +532,17 @@ class CarlBot(discord.Client):
                     elif userID not in self.retard:
                         self.retard[userID] = 1
                         write_json('retard.json', self.retard)
-                        await self.timed_message(message.channel, message, "Welcome to the retard club, {0}".format(args[0]))
+                        await self.send_message(message.channel, "Welcome to the retard club, {0}".format(args[0]))
                     else:
                         if len(args) == 1:
                             self.retard[userID] += 1
                             write_json('retard.json', self.retard)
-                            await self.timed_message(message.channel, message, "**{0}** just tipped **{1} 1** retard coin, **{1}** now has **{2}** coins.".format(message.author.name.replace("_", "\_"), message.mentions[0].name.replace("_", "\_"), self.retard[userID]))
+                            await self.send_message(message.channel, "**{0}** just tipped **{1} 1** retard coin, **{1}** now has **{2}** coins.".format(message.author.name.replace("_", "\_"), message.mentions[0].name.replace("_", "\_"), self.retard[userID]))
                         else:
                             reason = ' '.join(args[1:])
                             self.retard[userID] += 1
                             write_json('retard.json', self.retard)
-                            await self.timed_message(message.channel, message, "**{0}** just tipped **{1} 1** retard coin, reason: `{2}`\n**{1}** now has **{3}** coins.".format(message.author.name.replace("_", "\_"), message.mentions[0].name.replace("_", "\_"), reason, self.retard[userID]))
+                            await self.send_message(message.channel, "**{0}** just tipped **{1} 1** retard coin, reason: `{2}`\n**{1}** now has **{3}** coins.".format(message.author.name.replace("_", "\_"), message.mentions[0].name.replace("_", "\_"), reason, self.retard[userID]))
                 except IndexError:
                     return
                 except UnboundLocalError:
@@ -539,7 +550,7 @@ class CarlBot(discord.Client):
                 except discord.HTTPException:
                     return
             elif command == 'sc':
-                smallcaps_string = smallcaps(message.content[4:])
+                smallcaps_string = smallcaps(message.clean_content[4:])
                 await self.send_message(message.channel, smallcaps_string)
             elif command == 'bl':
                 if message.author.id != CARL_DISCORD_ID:
@@ -622,7 +633,7 @@ class CarlBot(discord.Client):
                             if len(message.content) < 1750 or premium_member:
                                 self.bio[message.author.id] = message.clean_content[7:]
                                 write_json('bio.json', self.bio)
-                                await self.timed_message(message.channel, message, "**{}'s** bio was added".format(message.author))
+                                await self.send_message(message.channel, "**{}'s** bio was added".format(message.author))
                     elif args[0] == "+=":
                         if message.author.id not in self.whitelist:
                             if (len(message.clean_content[8:]) + len(self.bio[message.author.id])) < 2000:
@@ -636,7 +647,7 @@ class CarlBot(discord.Client):
                                 await self.send_message(message.channel, "Too long")
                         else:
                             if len(args) == 1:
-                                await self.timed_message(message.channel, message, "retard <:FailFish:235926308071276555>")
+                                await self.send_message(message.channel, "retard <:FailFish:235926308071276555>")
                             try:
                                 self.bio[message.author.id] += "\n{}".format(message.clean_content[8:])
                             except KeyError:
@@ -668,7 +679,7 @@ class CarlBot(discord.Client):
                                     asyncio.sleep(0.3)
                     else:
                         print(bioname)
-                        await self.timed_message(message.channel, message, "User has not set a bio\nTo set a bio use `!bio +`, no mention required")
+                        await self.send_message(message.channel, "User has not set a bio\nTo set a bio use `!bio +`, no mention required")
 
             elif command == 'speak':
                 if not message.mentions and len(args) == 0:
@@ -714,7 +725,7 @@ class CarlBot(discord.Client):
                 #if message.author.id != CARL_DISCORD_ID:
                 #    return
                 if len(args) == 0:
-                    await self.timed_message(message.channel, message, "You sure are.")
+                    await self.send_message(message.channel, "You sure are.")
                 elif args[0].lower() in ['leaderboard', 'leaderboards', 'top', 'highscore', 'highscores', 'hiscores']:
                     ladboard = self.sicklad
                     post_this = "**Current standings:**\n"
@@ -730,9 +741,9 @@ class CarlBot(discord.Client):
                             continue
                     #this fucking sucks
                     post_this += "**{0}** !sicklads in total spread across **{1}** sick lads.".format(sum(self.sicklad.values()),len(self.sicklad))
-                    await self.timed_message(message.channel, message, post_this)
+                    await self.send_message(message.channel, post_this)
                 if message.mentions[0].id == message.author.id:
-                    await self.timed_message(message.channel, message, "You can't call yourself a sick lad, what the h*ck")
+                    await self.send_message(message.channel, "You can't call yourself a sick lad, what the h*ck")
                 try:
                     userID = ''.join(message.mentions[0].id)
                     userID = re.sub("[^0-9]", "", userID)
@@ -741,17 +752,17 @@ class CarlBot(discord.Client):
                     elif userID not in self.sicklad:
                         self.sicklad[userID] = 1
                         write_json('sicklad.json', self.sicklad)
-                        await self.timed_message(message.channel, message, "Welcome to the sicklad club, {0}".format(message.mentions[0].display_name))
+                        await self.send_message(message.channel, "Welcome to the sicklad club, {0}".format(message.mentions[0].display_name))
                     else:
                         if len(args) == 1:
                             self.sicklad[userID] += 1
                             write_json('sicklad.json', self.sicklad)
-                            await self.timed_message(message.channel, message, "{0} thinks {1} is a sick lad, {1} is now a lvl {2} sicklad.".format(message.author.name.replace("_", "\_"), message.mentions[0].name.replace("_", "\_"), self.sicklad[userID]))
+                            await self.send_message(message.channel, "{0} thinks {1} is a sick lad, {1} is now a lvl {2} sicklad.".format(message.author.name.replace("_", "\_"), message.mentions[0].name.replace("_", "\_"), self.sicklad[userID]))
                         else:
                             reason = ' '.join(args[1:])
                             self.sicklad[userID] += 1
                             write_json('sicklad.json', self.sicklad)
-                            await self.timed_message(message.channel, message, "{0} thinks {1} is a sick lad, reason: `{2}`\n{1} is now a lvl {3} sicklad.".format(message.author.name.replace("_", "\_"), message.mentions[0].name.replace("_", "\_"), reason, self.sicklad[userID]))
+                            await self.send_message(message.channel, "{0} thinks {1} is a sick lad, reason: `{2}`\n{1} is now a lvl {3} sicklad.".format(message.author.name.replace("_", "\_"), message.mentions[0].name.replace("_", "\_"), reason, self.sicklad[userID]))
                 except IndexError:
                     return
                 except UnboundLocalError:
@@ -759,16 +770,32 @@ class CarlBot(discord.Client):
                 except discord.HTTPException:
                     return
             elif command == '8ball':
-                await self.timed_message(message.channel, message, (responses[random.randint(0, 19)]))
+                await self.send_message(message.channel, (responses[random.randint(0, 19)]))
+            
+            elif command in ['crossthestreams', 'cts']:
+                stream = " {1}\u3000{0}\n   {1}{0}\n\u3000 {0}\n   {0}{1}\n {0}\u3000{1}\n{0}\u3000\u3000{1}\n{0}\u3000\u3000{1}\n {0}\u3000{1}\n  {0} {1}\n\u3000  {1}\n\u3000{1} {0}\n {1}\u3000 {0}\n{1}\u3000\u3000{0}\n{1}   \u3000 {0}\n {1}\u3000  {0}\n\u3000{1}{0}\n     {0}{1}\n  {0}    {1}"
+                if len(args) == 0:
+                    whale = "<:Whale:239954158772289537>"
+                    cookie = ":cookie:"
+                elif len(args) == 1:
+                    whale = "<:Whale:239954158772289537>"
+                    cookie = str(args[0])
+                    print(args[0])
+                elif len(args) == 2:
+                    whale = str(args[0])
+                    cookie = str(args[1])
+                else:
+                    return
+                await self.send_message(message.channel, stream.format(whale, cookie))
             elif command == 'uptime':
-                uptime = str(datetime.timedelta(seconds=((time.time() + 3600) - starttime)))
+                uptime = str(timedelta(seconds=((time.time() + 3600) - starttime)))
                 uptime = re.sub("\.(.*)", "", uptime)
                 currtime = time.strftime("%H:%M:%S", time.gmtime(time.time() + 3600))
                 started_time = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(starttime))
                 em = discord.Embed(title="Local time", description=currtime, colour=0x14e818)
                 em.set_author(name=self.user.name, icon_url=self.user.avatar_url)
                 em.add_field(name="Current uptime", value=uptime, inline=True)
-                em.add_field(name="Starttime", value=started_time, inline=True)
+                em.add_field(name="Start time", value=started_time, inline=True)
                 await self.send_message(message.channel, embed=em)
 
             elif command == 'wcl':
@@ -814,18 +841,18 @@ class CarlBot(discord.Client):
                             elif difficulty == 4:
                                 uglystring += wclshit
                         print(uglystring)
-                        await self.timed_message(message.channel, message, uglystring)
+                        await self.send_message(message.channel, uglystring)
                     except ValueError:
                         print("keyerror")
                         return
             elif command == 'pickmyspec':
-                await self.timed_message(message.channel, message, random.choice(WOW_SPECS))
+                await self.send_message(message.channel, random.choice(WOW_SPECS))
             elif command == 'pickmyclass':
-                await self.timed_message(message.channel, message, random.choice(WOW_CLASSES))
-            elif command == 'aesthetics':
+                await self.send_message(message.channel, random.choice(WOW_CLASSES))
+            elif command in  ['aesthetics', 'aesthetic', 'ae']:
                 #if message.author.id != CARL_DISCORD_ID:
                 #    return
-                hehe = aesthetics(message.content[12:])
+                hehe = aesthetics(message.clean_content[len(command) + 2:])
                 await self.send_message(message.channel, hehe)
             elif command == 'timer':
                 print("len of args: {}\n".format(len(args)))
@@ -972,15 +999,16 @@ class CarlBot(discord.Client):
                 #em.add_field(name="Avatar", value="click me", url=user.avatar_url, inline=False)
                 await self.send_message(message.channel, embed=em)
             elif command == 'postcount':
+                user = message.author
                 if len(args) == 0:
-                    await self.timed_message(message.channel, message, "**{0}** posts by **{1}** chatters.".format(sum(self.postcount.values()), len(self.postcount)))
+                    await self.send_message(message.channel, "**{0}** posts by **{1}** chatters.".format(sum(self.postcount.values()), len(self.postcount)))
                 elif len(args) == 1:
                     post_this = ""
                     if message.mentions != []:
-                        await self.timed_message(message.channel, message, "{0} has posted {1} messages.".format(client.get_server('207943928018632705').get_member(message.mentions[0].id), self.postcount[message.mentions[0].id]))
+                        await self.send_message(message.channel, "{0} has posted {1} messages.".format(client.get_server('207943928018632705').get_member(message.mentions[0].id), self.postcount[message.mentions[0].id]))
                     elif args[0].lower() in ['leaderboard', 'leaderboards', 'top', 'highscore', 'highscores', 'hiscores']:
                         leaderboard = self.postcount
-                        post_this = "**Current standings:**\n"
+                        post_this = ""
                         rank = 1
                         for w in sorted(leaderboard, key=leaderboard.get, reverse=True):
                             if rank < 11:
@@ -991,8 +1019,10 @@ class CarlBot(discord.Client):
                                     continue
                             else:
                                 continue
-                    post_this += "**{0}** posts by **{1}** chatters.".format(sum(self.postcount.values()), len(self.postcount))    
-                    await self.timed_message(message.channel, message, post_this)
+                    post_this += "\n**{0}** posts by **{1}** chatters.".format(sum(self.postcount.values()), len(self.postcount))
+                    em = discord.Embed(title="Current standings:", description=post_this, colour=0x14e818)
+                    em.set_author(name=self.user.name, icon_url=self.user.avatar_url)
+                    await self.send_message(message.channel, embed=em)
                 else:
                     return
             
@@ -1000,29 +1030,54 @@ class CarlBot(discord.Client):
                 #if message.author.id != CARL_DISCORD_ID:
                 #    return
                 language = 'en'
+                definitions = {}
                 try:
                     url = 'https://od-api.oxforddictionaries.com/api/v1/entries/' + language + '/' + message.content[3:].lower()
                     r = requests.get(url, headers = {'app_id': app_id, 'app_key': app_key})
                     jsonthing = r.json()
                     print(jsonthing)
-                    word_type = jsonthing["results"][0]["lexicalEntries"][0]["lexicalCategory"]
-                except Exception:
-                    await self.send_message(message.channel, "Err, something went wrong.")
+                    
+                    wordname = message.content[3:].capitalize()
+                    pronounciation = jsonthing["results"][0]["lexicalEntries"][0]["pronunciations"][0]["phoneticSpelling"]
+                    user = message.author
+                    usercolor = message.server.get_member(user.id).colour
+                    em = discord.Embed(title=wordname, description="/{}/".format(pronounciation), colour=usercolor)
+                    em.set_author(name=user.display_name, icon_url=user.avatar_url, url=user.avatar_url)
+                    x = jsonthing["results"][0]["lexicalEntries"]
+                    xd = 1
+                    for i in x:
+                        print(i)
+                        f = 0
+                        #for sd in range(3):
+                        word_type = jsonthing["results"][0]["lexicalEntries"][f]["lexicalCategory"]
+                        try:
+                            
+                            d = jsonthing["results"][0]["lexicalEntries"][f]["entries"][0]["senses"][0]["definitions"]
+                            d = ''.join(d)
+                            definition = "{}. {}\n".format(xd, ''.join(i["entries"][0]["senses"][0]["definitions"]))
+                            try:
+                                definitions[word_type] += definition
+                            except KeyError:
+                                definitions[word_type] = definition
+                            xd += 1
+                            f += 1
+                        except IndexError:
+                            pass
+                except Exception as e:
+                    await self.send_message(message.channel, e)
                     return
 
-                definitions = ""
-                for i in range(3):
-                    try:
-                        d = jsonthing["results"][0]["lexicalEntries"][i]["entries"][0]["senses"][0]["definitions"]
-                        d = ''.join(d)
-                        definitions += "{}.\n".format(d[:-1])
-                    except IndexError:
-                        pass
-                await self.send_message(message.channel, "**{}**, _{}_\n{}".format(message.content[3:].capitalize(), word_type, definitions))
+                
+                #em.add_field(name="Pronounciation", value="{0:.1f}°C\n{1:.1f}°F".format(temp_c, temp_f), inline=True)
+
+                for box in definitions:
+                    em.add_field(name=box, value=definitions[box], inline=False)
+                print(definitions)
+                await self.send_message(message.channel, embed=em)
             elif command == 'convert':
                 try:
                     if len(args) == 0:
-                        await self.timed_message(message.channel, message, "**Usage:** !convert <amount> <currency> <base currency(optional)>\nbase currency is USD by default, type !convert rates for all rates.")
+                        await self.send_message(message.channel, "**Usage:** !convert <amount> <currency> <base currency(optional)>\nbase currency is USD by default, type !convert rates for all rates.")
                     elif args[0].isdigit() and len(args) == 1:
                         centiToFeet, centiToInch, feetToCm, inchToCm = converter(args[0])
                         await self.send_message(message.channel, "{0}cm = {1}'{2:.2f}\"\n{0}ft = {3:.2f}cm\n{0}in = {4:.2f}cm".format(args[0], centiToFeet, centiToInch, feetToCm, inchToCm))
@@ -1034,7 +1089,7 @@ class CarlBot(discord.Client):
                         moneystring = 'All rates are compared to the dollar\n'
                         for i in sorted(mm, key=mm.get):
                             moneystring += i+" = "+str(mm[i])+"\n"
-                        await self.timed_message(message.channel, message, moneystring)
+                        await self.send_message(message.channel, moneystring)
                     elif len(args) >= 2:
                         amount = args[0]
                         currency = args[1].upper()
@@ -1045,7 +1100,7 @@ class CarlBot(discord.Client):
                     m = requests.get("http://api.fixer.io/latest?base="+base_currency)
                     m = m.json()
                     rate_return = float(amount) / m['rates'][currency]
-                    await self.timed_message(message.channel, message, "**{0:,.2f} {1}** is equal to **{2:,.2f} {3}**".format(float(amount), currency, rate_return, base_currency))
+                    await self.send_message(message.channel, "**{0:,.2f} {1}** is equal to **{2:,.2f} {3}**".format(float(amount), currency, rate_return, base_currency))
                 except KeyError:
                     print("Convert KeyError")
                     return
@@ -1086,13 +1141,13 @@ class CarlBot(discord.Client):
                 snippet = results[0]['snippet']
                 await self.send_message(message.channel, "{}\n{}".format(url, snippet))
             elif command == "ping":
-                await self.timed_message(message.channel, message, "pong!")
+                await self.send_message(message.channel, "pong!")
             elif command in ["date","current_year", "time"]:
-                await self.timed_message(message.channel, message, "It's {0}".format(time.strftime("%Y-%m-%d\n%H:%M:%S (central carl time).")))
+                await self.send_message(message.channel, "It's {0}".format(time.strftime("%Y-%m-%d\n%H:%M:%S (central carl time).")))
             else:
                 tagname = re.sub("[^a-z0-9_-]", "", command)
                 if tagname in self.tags:
-                    await self.timed_message(message.channel, message, self.tags[tagname])
+                    await self.send_message(message.channel, self.tags[tagname])
                 else:
                     return
         elif "carl" in message.content.lower():
