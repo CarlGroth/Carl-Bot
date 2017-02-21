@@ -265,15 +265,8 @@ class CarlBot(discord.Client):
                 em.add_field(name="Humidity", value="{}%".format(humidity), inline=True)
                 em.add_field(name="Wind speed", value="{}m/s".format(windspeed), inline=True)
                 em.set_thumbnail(url=user.avatar_url)
+                await self.send_message(message.channel, embed=em)
                     
-                
-                try:
-                    city = int(city)
-                    CtoF = city * (9/5) + 32
-                    FtoC = (city - 32) * (5/9)
-                    await self.send_message(message.channel, "{0}°C is {1:.1f}°F\n{0}°F is {2:.1f}°C".format(city, CtoF, FtoC))
-                except ValueError:
-                    await self.send_message(message.channel, embed=em)
             
             elif command in ['affix', 'affixes', 'm+']:
                 #if message.author.id != CARL_DISCORD_ID:
