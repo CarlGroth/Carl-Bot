@@ -130,9 +130,11 @@ class CarlBot(discord.Client):
             return
         if message.channel.is_private:
             return
-        if message.author.id == self.user.id:
+        if message.author.id in [self.user.id, "283540074837049354"]:
             return
         if message.clean_content.startswith(self.prefix):
+            return
+        if message.clean_content.startswith('$'):
             return
         if message.author.id == "106429844627169280":
             if message.content.startswith("++"):
@@ -151,7 +153,9 @@ class CarlBot(discord.Client):
             return
         if before.clean_content == after.clean_content:
             return
-        if before.author.id == self.user.id:
+        if before.author.id in [self.user.id, "283540074837049354"]:
+            return
+        if before.clean_content.startswith('$'):
             return
         if before.author.id == "106429844627169280":
             if before.content.startswith("++"):
