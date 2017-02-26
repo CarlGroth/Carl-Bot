@@ -58,25 +58,8 @@ class CarlBot(discord.Client):
         self.blacklist = load_json('blacklist.json')
         self.home = load_json('weather.json')
         self.aiosession = aiohttp.ClientSession(loop=self.loop)
-    # noinspection PyMethodOverriding
-    def run(self):
-        loop = asyncio.get_event_loop()
-        try:
-            loop.create_task(self.log_on())
-            loop.run_until_complete(self.start(self.token))
-            loop.run_until_complete(self.connect())
-        except Exception:
-            loop.run_until_complete(self.close())
-            pending = asyncio.Task.all_tasks()
-            gathered = asyncio.gather(*pending)
-            try:
-                gathered.cancel()
-                loop.run_forever()
-                gathered.exception()
-            except:
-                pass
-        finally:
-            loop.close()
+        self.userinfo = load_json('users.json')
+        self.ignore = load_json('ignore.json')
 
     def is_carl():
         return message.author.id == CARL_DISCORD_ID
@@ -90,16 +73,20 @@ class CarlBot(discord.Client):
         starttime = time.time() + 3600
         for server in self.servers:
             print(server.name)
+        member_list = self.get_all_members()
+        for member in member_list:
+            if member.id not in self.userinfo:
+                self.userinfo[member.id] = {"names": [member.name],
+                                            "roles": [x.name for x in member.roles if x.name != "@everyone"]}
+            elif member.name not in self.userinfo[member.id]["names"]:
+                self.userinfo[member.id]["names"].append(member.name)
+        write_json('users.json', self.userinfo)
 
-
-    async def log_on(self):
-        await client.start(self.token)
-
-    async def timed_message(self, channel, ogmsg, message_content):
-        timedmsg = await self.send_message(channel, message_content)
-        await asyncio.sleep(1200)
-        await self.delete_message(ogmsg)
-        await self.delete_message(timedmsg)
+    async def userfix(self, member):
+        if member.id not in self.userinfo:
+            self.userinfo[member.id] = {"names": [member.name],
+                                        "roles": [x.name for x in member.roles if x.name != "@everyone"]}
+        write_json('users.json', self.userinfo)
 
     async def say_message(self, channel, ogmsg, message_content):
         timedmsg = await self.send_message(channel, message_content)
@@ -110,8 +97,15 @@ class CarlBot(discord.Client):
 
     async def on_member_update(self, before, after):
         if before.nick != after.nick:
-            await self.send_message(discord.Object(id="249336368067510272"), ":spy: **{0}#{1}** changed their nickname:\n**Before:** {2}\n**+After:** {3}".format(before.name, before.discriminator, before.nick, after.nick))
+            await self.send_message(discord.Object(id="249336368067510272"), ":spy: **{0}#{1}** changed their nickname:\n**Before:** {2}\n**+After:** {3}".format(before.name, before.discriminator, before.display_name, after.display_name))
+            await self.userfix(before)
+            if after.nick not in self.userinfo[before.id]["names"]:
+                self.userinfo[before.id]["names"].append(after.display_name)
+            write_json('users.json', self.userinfo)
         elif before.roles != after.roles:
+            await self.userfix(before)
+            self.userinfo[before.id]["roles"] = [x.name for x in after.roles if x.name != "@everyone"]
+            write_json('users.json', self.userinfo)
             if len(before.roles) < len(after.roles):
                 #role added
                 s = set(before.roles)
@@ -123,6 +117,15 @@ class CarlBot(discord.Client):
                 await self.send_message(discord.Object(id="249336368067510272"), ":warning: **{}** had the role **{}** removed.".format(before.display_name, newrole[0].name))
     async def on_member_join(self, member):
         await self.send_message(discord.Object(id='249336368067510272'), ":white_check_mark: **{0}#{1}** *({2})* Joined the server at `{3}`<@{4}> <@{5}> :white_check_mark:".format(member.name, member.discriminator, member.id, time.strftime("%Y-%m-%d %H:%M:%S (central carl time)."), CARL_DISCORD_ID, "158370770068701184"))
+        if member.id not in self.userinfo:
+            await self.userfix(member)
+        else:
+            allRoles = member.server.roles
+            checkthis = self.userinfo[member.id]["roles"]
+            rolestobeadded = [x for x in allRoles if x.name in checkthis]
+            await self.add_roles(member, *rolestobeadded)
+            await self.change_nickname(member, self.userinfo[member.id]["names"][-1])
+            
     async def on_member_remove(self, member):
         await self.send_message(discord.Object(id='249336368067510272'), ":wave: **{0}#{1}** *({2})* left the server at `{3}`<@{4}> <@{5}> :wave:".format(member.name, member.discriminator, member.id, time.strftime("%Y-%m-%d %H:%M:%S (central carl time)."), CARL_DISCORD_ID, "158370770068701184"))
     async def on_message_delete(self, message):
@@ -169,6 +172,8 @@ class CarlBot(discord.Client):
     
     async def on_message(self, message):
         #print(message.clean_content)
+        if message.channel.id in self.ignore and message.author.id != CARL_DISCORD_ID:
+            return
         if message.author == self.user:
             return
         if message.channel.is_private:
@@ -177,25 +182,12 @@ class CarlBot(discord.Client):
         if "@everyone" in message.content:
             print("at everyone in sdmasoidj")
             return
+        if "@here" in message.content:
+            return
         if random.randint(1, 10000) == 1:
             legendaryRole = discord.utils.get(message.server.roles, name='Legendary')
             await self.add_roles(message.author, legendaryRole)
             await self.send_message(message.channel, "{} just received a legendary item: **{}**".format(message.author.mention, random.choice(legendaries)))
-        if message.author.id in self.blacklist:
-            for mention in message.mentions:
-                if mention.id == CARL_DISCORD_ID:
-                    await self.delete_message(message)
-                    await self.send_message(message.channel, "fuck off, {}".format(message.author.name))
-                    return
-        try:
-            self.postcount[message.author.id] += 1
-            write_json('postcount.json', self.postcount)
-        except KeyError:
-            self.postcount[message.author.id] = 1
-            write_json('postcount.json', self.postcount)
-        except IndexError:
-            self.postcount[message.author.id] = 1
-            write_json('postcount.json', self.postcount)
         if message.content.startswith(self.prefix):
             if message.author.id in self.blacklist:
                 return
@@ -204,7 +196,7 @@ class CarlBot(discord.Client):
             command = command.lower()
             print(command)
             if command == 'say':
-                await self.say_message(message.channel, message, "{}".format(message.content[5:]))
+                await self.say_message(message.channel, message, "{}".format(message.clean_content[5:]))
             elif command =='bread':
                 user = message.mentions[0]
                 em_before = discord.Embed(title="Bread", description="Sending bread...", colour=0x42f4dc)
@@ -246,7 +238,7 @@ class CarlBot(discord.Client):
                 else:
                     city = ' '.join(args)
                     if args[0] == "home" and len(args) > 1:
-                        home = ''.join(args[1:])
+                        home = ' '.join(args[1:])
                         self.home[user.id] = home
                         write_json('weather.json', self.home)
                         await self.send_message(message.channel, "Home set to: **{}**".format(home))
@@ -303,6 +295,17 @@ class CarlBot(discord.Client):
                 N = (N + 1) % 8
                 em.add_field(name="In three weeks", value="**EU:**\n{}\n{}\n{}\n\n**NA:**\n{}\n{}\n{}".format(AFFIX1[E], AFFIX2[E], AFFIX3[E], AFFIX1[N], AFFIX2[N], AFFIX3[N]), inline=True)
                 await self.send_message(message.channel, embed=em)
+            elif command == 'ignorechannel':
+                if message.author.id not in self.whitelist:
+                    return
+                if not message.channel_mentions:
+                    return
+                for channel_mention in message.channel_mentions:
+                    if channel_mention.id in self.ignore:
+                        del self.ignore[channel_mention.id]
+                    else:
+                        self.ignore[channel_mention.id] = channel_mention.name
+                write_json('ignore.json', self.ignore)
             elif command in ['dice', 'roll']:
                 try:
                     if len(args) == 0:
@@ -331,6 +334,10 @@ class CarlBot(discord.Client):
                 except ValueError:
                     return
 
+            elif command == 'poll':
+                msg = await self.send_message(message.channel, message.clean_content[5:])
+                await self.add_reaction(msg, '👍')
+                await self.add_reaction(msg, '👎')
             elif command == 'mute':
                 if message.author.id not in self.whitelist:
                     return
@@ -342,7 +349,17 @@ class CarlBot(discord.Client):
                     await self.add_roles(user, muterole)
                     mutestring.append(user.display_name)
                 await self.send_message(message.channel, "**{}** just muted **{}**".format(message.author.display_name, ', '.join(mutestring)))
-
+            elif command == 'unmute':
+                if message.author.id not in self.whitelist:
+                    return
+                muterole = discord.utils.get(message.server.roles, name='Stop being a faggot')
+                if not message.mentions:
+                    return
+                mutestring = []
+                for user in message.mentions:
+                    await self.remove_roles(user, muterole)
+                    mutestring.append(user.display_name)
+                await self.send_message(message.channel, "**{}** just unmuted **{}**".format(message.author.display_name, ', '.join(mutestring)))
             elif command in ['choice', 'choose']:
                 if len(args) == 0:
                     return
@@ -352,36 +369,30 @@ class CarlBot(discord.Client):
                 await self.send_message(message.channel, random.choice(choices))
 
             elif command == 'tag':
-                if message.mentions != []:
+                if message.mentions:
                     return
                 tagreturn = ' '.join(args[2:])
                 taglist = self.tags
                 if args[0] == 'list':
-                    d = ', '.join(sorted(list(self.tags.keys())))
-                    if len(d) < 1900:
+                    d = sorted(list(self.tags.keys()))
+                    if sum(len(t) for t in d) < 1900:
+                        d = ', '.join(d)
                         await self.send_message(message.author, d)
                     else:
                         print("long trigger")
-                        firstmessage = []
-                        secondmessage = []
-                        thirdmessage = []
-                        for tag in sorted(self.tags.keys()):
-                            print(tag)
-                            if len(', '.join(firstmessage)) < 1700:
-                                print(len(firstmessage))
-                                firstmessage.append(tag)
-                            elif len(', '.join(secondmessage)) < 1700:
-                                print(len(secondmessage))
-                                secondmessage.append(tag)
+                        tempmessage = []
+                        finalmessage = []
+                        for tag in d:
+                            if len(', '.join(tempmessage)) < 1800:
+                                tempmessage.append(tag)
                             else:
-                                continue
-                        firstsend = ', '.join(firstmessage)
-                        secondsend = ', '.join(secondmessage)
-                        print(firstsend)
-                        print(secondsend)
-                        print(len(firstmessage), len(secondmessage))
-                        await self.send_message(message.author, firstsend)
-                        await self.send_message(message.author, secondsend)
+                                xd = ', '.join(tempmessage)
+                                finalmessage.append(xd)
+                                tempmessage = []
+                        finalmessage.append(', '.join(tempmessage))
+                        for x in finalmessage:
+                            if x != "":
+                                await self.send_message(message.author, x)
                 elif args[0] == "search":
                     if len(args) < 2:
                         return
@@ -408,7 +419,8 @@ class CarlBot(discord.Client):
                         em.set_footer(text="{} results. (page {}/{})".format(i-1, 1, math.ceil((i-1)/15)))
                         await self.send_message(message.channel, embed=em)
                         def check(mesg):
-                            return True
+                            if mesg.content.isdigit():
+                                return True
                         msg = await self.wait_for_message(author=message.author, check=check)
                         if msg.content.isdigit():
                             listoflines = bad_coding_practice_variable.split('\n')
@@ -554,37 +566,53 @@ class CarlBot(discord.Client):
                     return
                 if not message.mentions:
                     return
+                BLACKED = []
                 if args[0] in ['+', 'add']:
-                    self.blacklist[message.mentions[0].id] = message.mentions[0].name
+                    fmt = "Blacklisted **{}.**"
+                    for usr in message.mentions:
+                        self.blacklist[usr.id] = usr.name
+                        BLACKED.append(usr.display_name)
+                    BLACKED = ', '.join(BLACKED)
                     write_json('blacklist.json', self.blacklist)
-                    await self.send_message(discord.Object(id='249336368067510272'), "{} is now blacklisted.".format(message.mentions[0].name))
                 elif args[0] in ['-', 'del']:
-                    if message.mentions[0].id in self.blacklist:
-                        del self.blacklist[message.mentions[0].id]
-                        write_json('blacklist.json', self.blacklist)
-                        await self.send_message(discord.Object(id='249336368067510272'), "{} is no longer blacklisted.".format(message.mentions[0].name))
+                    fmt = "Removed **{}** from the blacklist."
+                    for usr in message.mentions:
+                        if usr.id in self.blacklist:
+                            del self.blacklist[usr.id]
+                            BLACKED.append(usr.display_name)
+                    BLACKED = ', '.join(BLACKED)
+                    write_json('blacklist.json', self.blacklist)
+                await self.send_message(discord.Object(id='249336368067510272'), fmt.format(BLACKED))
             elif command == 'wl':
                 if message.author.id != CARL_DISCORD_ID:
                     return
                 if not message.mentions:
                     return
+                whitelisted = []
                 if args[0] in ['+', 'add']:
-                    self.whitelist[message.mentions[0].id] = message.mentions[0].id
+                    fmt = "Whitelisted **{}.**"
+                    for usr in message.mentions:
+                        self.whitelist[usr.id] = usr.name
+                        whitelisted.append(usr.display_name)
+                    whitelisted = ', '.join(whitelisted)
                     write_json('whitelist.json', self.whitelist)
-                    await self.send_message(discord.Object(id='249336368067510272'), "{} is now whitelisted.".format(message.mentions[0].name))
                 elif args[0] in ['-', 'del']:
-                    if message.mentions[0].id in self.whitelist:
-                        del self.whitelist[message.mentions[0].id]
-                        write_json('whitelist.json', self.whitelist)
-                        await self.send_message(discord.Object(id='249336368067510272'), "{} is no longer whitelisted.".format(message.mentions[0].name))
+                    fmt = "Removed **{}** from the whitelist."
+                    for usr in message.mentions:
+                        if usr.id in self.whitelist:
+                            del self.whitelist[usr.id]
+                            whitelisted.append(usr.display_name)
+                    whitelisted = ', '.join(whitelisted)
+                    write_json('whitelist.json', self.whitelist)
+                else:
+                    return
+                await self.send_message(discord.Object(id='249336368067510272'), fmt.format(whitelisted))
             elif command == 'asdban':
-                if message.author.id == CARL_DISCORD_ID or message.author.id in self.whitelist:
+                if message.author.id in self.whitelist:
                     bannedusers = []
-                    i = 0
                     for mention in message.mentions:
                         await self.ban(mention, delete_message_days=0)
-                        bannedusers.append("{}, ".format(message.mentions[i].name))
-                        i += 1
+                        bannedusers.append(mention.name)
                     await self.send_message(message.channel, "{} Just banned {}.".format(message.author, ', '.join(bannedusers)))
             elif command == 'spook':
                 if message.mentions:
@@ -931,54 +959,49 @@ class CarlBot(discord.Client):
                     return
             
             elif command in ['info', 'i']:
-                if message.mentions != []:
+                if message.mentions:
                     user = message.mentions[0]
-                    try:
-                        retard = self.retard[user.id]
-                    except KeyError:
-                        retard = 0
-                    try:
-                        sicklad = self.sicklad[user.id]
-                    except KeyError:
-                        sicklad = 0
-                    try:
-                        postcount = self.postcount[user.id]
-                    except KeyError:
-                        postcount = "0 or bot"
-                    try:
-                        joined_at = user.joined_at
-                    except:
-                        joined_at = "User somehow doesn't have a join date.'"
-                    try:
-                        bio = self.bio[user.id]
-                    except KeyError:
-                        bio = "User has not set a bio."
-                    if len(bio) > 1750:
-                        bio = "User's bio too long - use `!bio` instead.'"
                 else:
                     user = message.author
-                    try:
-                        retard = self.retard[user.id]
-                    except KeyError:
-                        retard = 0
-                    try:
-                        sicklad = self.sicklad[user.id]
-                    except KeyError:
-                        sicklad = 0
-                    try:
-                        postcount = self.postcount[user.id]
-                    except KeyError:
-                        postcount = "0 or bot"
-                    try:
-                        joined_at = user.joined_at
-                    except:
-                        joined_at = "User somehow doesn't have a join date.'"
-                    try:
-                        bio = self.bio[user.id]
-                    except KeyError:
-                        bio = "User has not set a bio."
-                    if len(bio) > 1750:
-                        bio = "User's bio too long - use `!bio` instead."
+                try:
+                    retard = "{}\nrank {}".format(self.retard[user.id], (sorted(self.retard, key=self.retard.get, reverse=True).index(user.id)+1))
+                except KeyError:
+                    retard = 0
+                try:
+                    sicklad = "{}\nrank {}".format(self.sicklad[user.id], (sorted(self.sicklad, key=self.sicklad.get, reverse=True).index(user.id)+1))
+                except KeyError:
+                    sicklad = 0
+                try:
+                    postcount = "{}\nrank {}".format(self.postcount[user.id], (sorted(self.postcount, key=self.postcount.get, reverse=True).index(user.id)+1))
+                except KeyError:
+                    postcount = "0 or bot"
+                try:
+                    joined_at = user.joined_at
+                    days_since = "({} days ago)".format((datetime.today() - user.joined_at).days)
+                except:
+                    joined_at = "User somehow doesn't have a join date.'"
+                    days_since = ""
+                try:
+                    days_since_creation = "({} days ago)".format((datetime.today() - user.created_at).days)
+                except Exception as e:
+                    print(e)
+                    days_since_creation = ""
+                try:
+                    bio = self.bio[user.id]
+                except KeyError:
+                    bio = "User has not set a bio."
+                try:
+                    if len(self.userinfo[user.id]["names"]) > 1:
+                        hmm = "Nicknames"
+                        nicks = '\n'.join(self.userinfo[user.id]["names"])
+                    else:
+                        hmm = "Nickname"
+                        nicks = user.display_name
+                except KeyError:
+                    nicks = user.display_name
+                if len(bio) > 1750:
+                    bio = "User's bio too long - use `!bio` instead.'"
+                
                 
                 usercolor = message.server.get_member(user.id).colour
                 created = re.sub("\.(.*)", "", str(user.created_at))
@@ -986,14 +1009,13 @@ class CarlBot(discord.Client):
                 em = discord.Embed(title="Userinfo", description=bio, colour=usercolor)
                 em.set_author(name=user.name, icon_url=user.avatar_url, url=user.avatar_url)
                 em.add_field(name="Name", value="{}#{}".format(user.name, user.discriminator), inline=True)
-                em.add_field(name="Nickname", value=user.display_name, inline=True)
+                em.add_field(name=hmm, value=nicks, inline=True)
                 em.add_field(name="ID", value=user.id, inline=True)
                 em.add_field(name="Postcount", value=postcount, inline=True)
                 em.add_field(name="Retard coins", value=retard, inline=True)
                 em.add_field(name="Sicklad", value=sicklad, inline=True)
-                em.add_field(name="Created at", value="{}".format(created), inline=True)
-                em.add_field(name="Joined at", value="{}".format(joined_at), inline=True)
-                #em.add_field(name="Avatar", value="click me", url=user.avatar_url, inline=False)
+                em.add_field(name="Created at", value="{} {}".format(created.replace(" ", "\n"), days_since_creation), inline=True)
+                em.add_field(name="Joined at", value="{} {}".format(joined_at.replace(" ", "\n"), days_since), inline=True)
                 await self.send_message(message.channel, embed=em)
             elif command == 'postcount':
                 user = message.author
@@ -1151,18 +1173,19 @@ class CarlBot(discord.Client):
             xd = await self.send_message(discord.Object(id="213720502219440128"), "<@106429844627169280>, you were mentioned!")
             await self.delete_message(xd)
             await self.send_message(discord.Object(id="213720502219440128"), "**{}** in **#{}**:\n{}".format(message.author.display_name, message.channel.name, message.clean_content))
-        elif re.search("(r\/[\w]+)", message.content):
-            if message.content.startswith("r/") or message.content.startswith("/r/"):
-                subreddit = re.search("(r\/[\w]+)", message.content)
-                subreddit = subreddit.group(1)
-                #subreddit = re.sub("[\/]?", "", subreddit)
-                await self.send_message(message.channel, "https://www.reddit.com/{}".format(subreddit))
-            else:
-                return
+        try:
+            self.postcount[message.author.id] += 1
+            write_json('postcount.json', self.postcount)
+        except KeyError:
+            self.postcount[message.author.id] = 1
+            write_json('postcount.json', self.postcount)
+        except IndexError:
+            self.postcount[message.author.id] = 1
+            write_json('postcount.json', self.postcount)
         else:
             await self.log(message)
             return
 
 if __name__ == '__main__':
         bot = CarlBot()
-        bot.run()
+        bot.run(token)
