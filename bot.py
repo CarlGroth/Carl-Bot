@@ -99,7 +99,11 @@ class CarlBot(discord.Client):
         if before.nick != after.nick:
             await self.send_message(discord.Object(id="249336368067510272"), ":spy: **{0}#{1}** changed their nickname:\n**Before:** {2}\n**+After:** {3}".format(before.name, before.discriminator, before.display_name, after.display_name))
             await self.userfix(before)
-            if after.nick not in self.userinfo[before.id]["names"]:
+            if after.display_name not in self.userinfo[before.id]["names"]:
+                self.userinfo[before.id]["names"].append(after.display_name)
+            else:
+                old_index = self.userinfo[before.id]["names"].index(after.display_name)
+                self.userinfo[before.id]["names"].pop(old_index)
                 self.userinfo[before.id]["names"].append(after.display_name)
             write_json('users.json', self.userinfo)
         elif before.roles != after.roles:
@@ -124,6 +128,7 @@ class CarlBot(discord.Client):
             checkthis = self.userinfo[member.id]["roles"]
             rolestobeadded = [x for x in allRoles if x.name in checkthis]
             await self.add_roles(member, *rolestobeadded)
+            await asyncio.sleep(1)
             await self.change_nickname(member, self.userinfo[member.id]["names"][-1])
             
     async def on_member_remove(self, member):
@@ -172,8 +177,6 @@ class CarlBot(discord.Client):
     
     async def on_message(self, message):
         #print(message.clean_content)
-        if message.channel.id in self.ignore and message.author.id != CARL_DISCORD_ID:
-            return
         if message.author == self.user:
             return
         if message.channel.is_private:
@@ -189,6 +192,8 @@ class CarlBot(discord.Client):
             await self.add_roles(message.author, legendaryRole)
             await self.send_message(message.channel, "{} just received a legendary item: **{}**".format(message.author.mention, random.choice(legendaries)))
         if message.content.startswith(self.prefix):
+            if message.channel.id in self.ignore and message.author.id not in self.whitelist:
+                return
             if message.author.id in self.blacklist:
                 return
             msg = message.content[1:]
@@ -253,7 +258,7 @@ class CarlBot(discord.Client):
                 temp_c = temp_k - 273.15
                 temp_f = temp_c * (9/5) + 32
                 city, country, weather, humidity, windspeed = json_object['name'],json_object['sys']['country'], json_object['weather'][0]['description'], json_object['main']['humidity'], json_object['wind']['speed']
-                usercolor = message.server.get_member(user.id).colour
+                usercolor = message.author.color
                 em = discord.Embed(title="Weather in {0}, {1}".format(city, country), description="", colour=usercolor)
                 em.set_author(name=user.display_name, icon_url=user.avatar_url, url=user.avatar_url)
                 em.add_field(name="Temperature", value="{0:.1f}°C\n{1:.1f}°F".format(temp_c, temp_f), inline=True)
@@ -502,8 +507,8 @@ class CarlBot(discord.Client):
                 if message.author.id == CARL_DISCORD_ID:
                     await self.send_message(message.channel, "{}".format(eval(message.content[3:])))
             elif command == 'avatar':
-                #if message.author.id != CARL_DISCORD_ID:
-                #    return
+                if message.author.id not in self.whitelist:
+                    return
                 if message.attachments:
                     avatar = message.attachments[0]['url']
                 else:
@@ -993,14 +998,14 @@ class CarlBot(discord.Client):
                 try:
                     if len(self.userinfo[user.id]["names"]) > 1:
                         hmm = "Nicknames"
-                        nicks = '\n'.join(self.userinfo[user.id]["names"])
+                        nicks = '\n'.join(self.userinfo[user.id]["names"][-5:])
                     else:
                         hmm = "Nickname"
                         nicks = user.display_name
                 except KeyError:
                     nicks = user.display_name
-                if len(bio) > 1750:
-                    bio = "User's bio too long - use `!bio` instead.'"
+                if len(bio) > 750:
+                    bio = "User's bio too long - use `!bio` instead."
                 
                 
                 usercolor = message.server.get_member(user.id).colour
@@ -1023,8 +1028,9 @@ class CarlBot(discord.Client):
                     await self.send_message(message.channel, "**{0}** posts by **{1}** chatters.".format(sum(self.postcount.values()), len(self.postcount)))
                 elif len(args) == 1:
                     post_this = ""
-                    if message.mentions != []:
-                        await self.send_message(message.channel, "{0} has posted {1} messages.".format(client.get_server('207943928018632705').get_member(message.mentions[0].id), self.postcount[message.mentions[0].id]))
+                    if message.mentions:
+                        user = message.mentions[0]
+                        await self.send_message(message.channel, "{0} has posted {1} messages.".format(user.display_name, self.postcount[user.id]))
                     elif args[0].lower() in ['leaderboard', 'leaderboards', 'top', 'highscore', 'highscores', 'hiscores']:
                         leaderboard = self.postcount
                         post_this = ""
@@ -1038,10 +1044,10 @@ class CarlBot(discord.Client):
                                     continue
                             else:
                                 continue
-                    post_this += "\n**{0}** posts by **{1}** chatters.".format(sum(self.postcount.values()), len(self.postcount))
-                    em = discord.Embed(title="Current standings:", description=post_this, colour=0x14e818)
-                    em.set_author(name=self.user.name, icon_url=self.user.avatar_url)
-                    await self.send_message(message.channel, embed=em)
+                        post_this += "\n**{0}** posts by **{1}** chatters.".format(sum(self.postcount.values()), len(self.postcount))
+                        em = discord.Embed(title="Current standings:", description=post_this, colour=0x14e818)
+                        em.set_author(name=self.user.name, icon_url=self.user.avatar_url)
+                        await self.send_message(message.channel, embed=em)
                 else:
                     return
             
@@ -1069,6 +1075,7 @@ class CarlBot(discord.Client):
                         f = 0
                         #for sd in range(3):
                         word_type = jsonthing["results"][0]["lexicalEntries"][f]["lexicalCategory"]
+                        print("this is the word type: " + word_type)
                         try:
                             
                             d = jsonthing["results"][0]["lexicalEntries"][f]["entries"][0]["senses"][0]["definitions"]
@@ -1085,10 +1092,6 @@ class CarlBot(discord.Client):
                 except Exception as e:
                     await self.send_message(message.channel, e)
                     return
-
-                
-                #em.add_field(name="Pronounciation", value="{0:.1f}°C\n{1:.1f}°F".format(temp_c, temp_f), inline=True)
-
                 for box in definitions:
                     em.add_field(name=box, value=definitions[box], inline=False)
                 print(definitions)
@@ -1154,11 +1157,20 @@ class CarlBot(discord.Client):
                 if message.author.id in self.blacklist:
                     await self.send_message(message.channel, "{} is blacklisted from the google command, wonder why".format(message.author.name))
                     return
-                postthis = ''
-                results = google_search(str(message.content[3:]), my_api_key, my_cse_id, num=1)
+                user = message.author
+                usercolor = user.color
+                em = discord.Embed(title="Google search", description="", colour=usercolor)
+                em.set_author(name=user.display_name, icon_url=user.avatar_url, url=user.avatar_url)
+                postme = ''
+                results = google_search(str(message.content[3:]), my_api_key, my_cse_id, num=4)
                 url = results[0]['link']
                 snippet = results[0]['snippet']
-                await self.send_message(message.channel, "{}\n{}".format(url, snippet))
+                em.add_field(name=url, value=snippet, inline=True)
+                for i in range(1, 4):
+                    url = results[i]['link']
+                    postme += "{}\n".format(url)
+                em.add_field(name="See also", value=postme, inline=True)
+                await self.send_message(message.channel, embed=em)
             elif command == "ping":
                 await self.send_message(message.channel, "pong!")
             elif command in ["date","current_year", "time"]:
@@ -1170,9 +1182,11 @@ class CarlBot(discord.Client):
                 else:
                     return
         elif "carl" in message.content.lower():
+            insensitive_carl = re.compile(re.escape('carl'), re.IGNORECASE)
             xd = await self.send_message(discord.Object(id="213720502219440128"), "<@106429844627169280>, you were mentioned!")
             await self.delete_message(xd)
-            await self.send_message(discord.Object(id="213720502219440128"), "**{}** in **#{}**:\n{}".format(message.author.display_name, message.channel.name, message.clean_content))
+            postme = insensitive_carl.sub('**__Carl__**', message.clean_content)
+            await self.send_message(discord.Object(id="213720502219440128"), "**{}** in **#{}**:\n{}".format(message.author.display_name, message.channel.name, postme))
         try:
             self.postcount[message.author.id] += 1
             write_json('postcount.json', self.postcount)
