@@ -441,7 +441,7 @@ class CarlBot(discord.Client):
                         try:
                             self.tags[tagname] += "\n{}".format(content)
                         except KeyError:
-                            self.tags[tagname] = "{}".format(content)
+                            self.tags[tagname] = content
                         write_json('taglist.json', self.tags)
                         await self.send_message(message.channel, "`{}` was appended to the tag: {}".format(content, tagname))
                     else:
@@ -454,18 +454,19 @@ class CarlBot(discord.Client):
                     if args[1] == 'list':
                         await self.send_message(message.channel, "Nice try, motherfucker.")
                         return
-                    if tagname   in taglist:
+                    if tagname in taglist:
                         def check(mesg):
-                            return True
+                            if mesg.content in ['r', 'y', 'yes', 'replace', 'c', 'n', 'no', 'cancel', 'a']:
+                                return True
 
-                        await self.send_message(message.channel, "Tag already exists. Replace or add to tag? (y/n/a)")
+                        await self.send_message(message.channel, "Tag already exists. **__r__**eplace, **__c__**ancel or **__a__**dd to? (r/c/a)")
                         msg = await self.wait_for_message(author=message.author, check=check)
-                        if msg.content.lower() == 'y':
+                        if msg.content.lower() in ['r', 'y', 'yes', 'replace']:
                             tagname = re.sub("[^a-z0-9_-]", "", args[1].lower())
                             self.tags[tagname] = message.content[(7+len(args[1])):]
                             write_json('taglist.json', self.tags)
                             await self.send_message(message.channel, "Tag succesfully replaced.")
-                        elif msg.content.lower() == 'n':
+                        elif msg.content.lower() in ['c', 'n', 'no', 'cancel']:
                             await self.send_message(message.channel, "Tag not replaced.")
                         elif msg.content.lower() == 'a':
                             tagname = re.sub("[^a-z0-9_-]", "", args[1].lower())
@@ -507,7 +508,7 @@ class CarlBot(discord.Client):
                 if message.author.id == CARL_DISCORD_ID:
                     await self.send_message(message.channel, "{}".format(eval(message.content[3:])))
             elif command == 'avatar':
-                if message.author.id not in self.whitelist:
+                if message.author.id != CARL_DISCORD_ID:
                     return
                 if message.attachments:
                     avatar = message.attachments[0]['url']
@@ -616,9 +617,14 @@ class CarlBot(discord.Client):
                 if message.author.id in self.whitelist:
                     bannedusers = []
                     for mention in message.mentions:
-                        await self.ban(mention, delete_message_days=0)
-                        bannedusers.append(mention.name)
-                    await self.send_message(message.channel, "{} Just banned {}.".format(message.author, ', '.join(bannedusers)))
+                        if mention.id != message.author.id:
+                            await self.ban(mention, delete_message_days=0)
+                            bannedusers.append(mention.name)
+                        else:
+                            await self.send_message(message.channel, "Can't ban yourself, dummy!")
+                            return
+                    if len(bannedusers) > 0:
+                        await self.send_message(message.channel, "{} Just banned {}.".format(message.author, ', '.join(bannedusers)))
             elif command == 'spook':
                 if message.mentions:
                     await self.send_message(message.channel, "you have been spooked, **{}** ! o no :skull_crossbones:".format(message.mentions[0].display_name))
@@ -640,7 +646,8 @@ class CarlBot(discord.Client):
                     if args[0] == '+':
                         if message.author.id in self.bio:
                             def check(mesg):
-                                return True
+                                if mesg.content in ['r', 'y', 'yes', 'replace', 'c', 'n', 'no', 'cancel', 'a']:
+                                    return True
                             await self.send_message(message.channel, "Bio already exists. **__r__**eplace, **__c__**ancel or **__a__**dd to? (r/c/a)")
                             msg = await self.wait_for_message(author=message.author, check=check)
                             if msg.content.lower() in ['r', 'y', 'yes', 'replace']:
@@ -692,6 +699,7 @@ class CarlBot(discord.Client):
                             print("hey, what the fuck")
                             await self.send_message(message.channel, "Bio for {0}:\n{1}".format(message.author, self.bio[bioname]))
                         else:
+                            #Blame kinny T for this abomination
                             listOfLines = self.bio[bioname]
                             listOfLines = listOfLines.splitlines()
                             tempmessage = "**Bio for {0}:**\n".format(user.display_name)
@@ -752,8 +760,6 @@ class CarlBot(discord.Client):
                 await self.send_message(discord.Object(id="240315894385868801"), speech)
                 
             elif command == 'sicklad':
-                #if message.author.id != CARL_DISCORD_ID:
-                #    return
                 if len(args) == 0:
                     await self.send_message(message.channel, "You sure are.")
                 elif args[0].lower() in ['leaderboard', 'leaderboards', 'top', 'highscore', 'highscores', 'hiscores']:
@@ -774,10 +780,10 @@ class CarlBot(discord.Client):
                     await self.send_message(message.channel, post_this)
                 if message.mentions[0].id == message.author.id:
                     await self.send_message(message.channel, "You can't call yourself a sick lad, what the h*ck")
+                    return
                 try:
-                    userID = ''.join(message.mentions[0].id)
-                    userID = re.sub("[^0-9]", "", userID)
-                    if userID == '':
+                    userID = message.mentions[0].id
+                    if not message.mentions:
                         return
                     elif userID not in self.sicklad:
                         self.sicklad[userID] = 1
@@ -800,7 +806,7 @@ class CarlBot(discord.Client):
                 except discord.HTTPException:
                     return
             elif command == '8ball':
-                await self.send_message(message.channel, (responses[random.randint(0, 19)]))
+                await self.send_message(message.channel, (random.choice(responses)))
             
             elif command in ['crossthestreams', 'cts']:
                 stream = " {1}\u3000{0}\n   {1}{0}\n\u3000 {0}\n   {0}{1}\n {0}\u3000{1}\n{0}\u3000\u3000{1}\n{0}\u3000\u3000{1}\n {0}\u3000{1}\n  {0} {1}\n\u3000  {1}\n\u3000{1} {0}\n {1}\u3000 {0}\n{1}\u3000\u3000{0}\n{1}   \u3000 {0}\n {1}\u3000  {0}\n\u3000{1}{0}\n     {0}{1}\n  {0}    {1}"
@@ -829,6 +835,7 @@ class CarlBot(discord.Client):
                 await self.send_message(message.channel, embed=em)
 
             elif command == 'wcl':
+                #this shit doesn't even nearly work
                 if len(args) == 3:
                     try:
                         charname, realm, region = args[0], args[1], args[2]
@@ -880,8 +887,6 @@ class CarlBot(discord.Client):
             elif command == 'pickmyclass':
                 await self.send_message(message.channel, random.choice(WOW_CLASSES))
             elif command in  ['aesthetics', 'aesthetic', 'ae']:
-                #if message.author.id != CARL_DISCORD_ID:
-                #    return
                 hehe = aesthetics(message.clean_content[len(command) + 2:])
                 await self.send_message(message.channel, hehe)
             elif command == 'timer':
@@ -927,8 +932,8 @@ class CarlBot(discord.Client):
                             timePrint = duration
                             timeUnit = "second"
                         #if len(args) >= 3:
-
-                    if duration < 86453301:
+                    #7 days
+                    if duration < 604800:
                         print("len of args: {}\n".format(len(args)))
                         if len(args) == 1:
                             await self.send_message(message.channel, "{0:.0f}-{1} timer started.".format(timePrint, timeUnit))
@@ -1187,16 +1192,16 @@ class CarlBot(discord.Client):
             await self.delete_message(xd)
             postme = insensitive_carl.sub('**__Carl__**', message.clean_content)
             await self.send_message(discord.Object(id="213720502219440128"), "**{}** in **#{}**:\n{}".format(message.author.display_name, message.channel.name, postme))
-        try:
-            self.postcount[message.author.id] += 1
-            write_json('postcount.json', self.postcount)
-        except KeyError:
-            self.postcount[message.author.id] = 1
-            write_json('postcount.json', self.postcount)
-        except IndexError:
-            self.postcount[message.author.id] = 1
-            write_json('postcount.json', self.postcount)
         else:
+            try:
+                self.postcount[message.author.id] += 1
+                write_json('postcount.json', self.postcount)
+            except KeyError:
+                self.postcount[message.author.id] = 1
+                write_json('postcount.json', self.postcount)
+            except IndexError:
+                self.postcount[message.author.id] = 1
+                write_json('postcount.json', self.postcount)
             await self.log(message)
             return
 
