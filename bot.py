@@ -168,7 +168,7 @@ class CarlBot(discord.Client):
         if before.author.id == "106429844627169280":
             if before.content.startswith("++"):
                 return
-        await self.send_message(discord.Object(id='249336368067510272'), ":pencil2: `{}`, **{}** edited their message:\n**Before:** {}\n**+After:** {}".format(time.strftime("%H:%M:%S"), before.author.name, before.clean_content, after.clean_content))
+        await self.send_message(discord.Object(id='249336368067510272'), ":pencil2: `{}` **{}** edited their message:\n**Before:** {}\n**+After:** {}".format(time.strftime("%H:%M:%S"), before.author.name, before.clean_content, after.clean_content))
 
 
     async def log(self, message):
@@ -229,7 +229,7 @@ class CarlBot(discord.Client):
                     if message.mentions[0] == self.user:
                         await self.send_message(message.channel, "I'm sorry, Carl. I'm afraid I can't do that.")
                     else:
-                        await self.send_message(message.channel, "banned user {}.".format(args[0]))
+                        await self.send_message(message.channel, "**{}** was just banned from the server.".format(message.mentions[0].display_name))
                 else:
                     await self.send_message(message.channel, "Nope")
             elif command in ['weather', 'temp', 'temperature']:
@@ -284,7 +284,7 @@ class CarlBot(discord.Client):
                 E = EU_indexthis.days // 7
                 N = NA_indexthis.days // 7
                 user = message.author
-                usercolor = message.server.get_member(user.id).colour
+                usercolor = user.colour
                 em = discord.Embed(title="Mythic+ affixes", description="", colour=usercolor)
                 em.set_author(name=user.display_name, icon_url=user.avatar_url, url=user.avatar_url)
                 em.add_field(name="+4", value="**EU:** {}\n**NA:** {}".format(AFFIX1[E], AFFIX1[N]), inline=True)
@@ -405,7 +405,7 @@ class CarlBot(discord.Client):
                     tagreturn = ""
                     bad_coding_practice_variable = ""
                     i = 1
-                    for tag in taglist:
+                    for tag in sorted(self.tags, key=self.tags.get, reverse=True):
                         if fuzz.partial_ratio(query, tag) > 80:
                             if i <= 15:
                                 tagreturn += "{}. {}\n".format(i, tag)
@@ -527,7 +527,6 @@ class CarlBot(discord.Client):
                     leaderboard = self.retard
                     post_this = "**Current standings:**\n"
                     rank = 1
-                    print(self.get_server('207943928018632705').get_member("98404146469699584"))
                     for w in sorted(leaderboard, key=leaderboard.get, reverse=True):
                         if rank < 11:
                             try:
@@ -1013,7 +1012,7 @@ class CarlBot(discord.Client):
                     bio = "User's bio too long - use `!bio` instead."
                 
                 
-                usercolor = message.server.get_member(user.id).colour
+                usercolor = user.color
                 created = re.sub("\.(.*)", "", str(user.created_at))
                 joined_at = re.sub("\.(.*)", "", str(user.joined_at))
                 em = discord.Embed(title="Userinfo", description=bio, colour=usercolor)
@@ -1070,7 +1069,7 @@ class CarlBot(discord.Client):
                     wordname = message.content[3:].capitalize()
                     pronounciation = jsonthing["results"][0]["lexicalEntries"][0]["pronunciations"][0]["phoneticSpelling"]
                     user = message.author
-                    usercolor = message.server.get_member(user.id).colour
+                    usercolor = user.color
                     em = discord.Embed(title=wordname, description="/{}/".format(pronounciation), colour=usercolor)
                     em.set_author(name=user.display_name, icon_url=user.avatar_url, url=user.avatar_url)
                     x = jsonthing["results"][0]["lexicalEntries"]
@@ -1139,11 +1138,11 @@ class CarlBot(discord.Client):
                     em_before.set_author(name=user.name, icon_url=user.avatar_url)
                     em_after = discord.Embed(title="Success", description="Check your direct messages.", colour=0x14e818)
                     em_after.set_author(name=user.name, icon_url=user.avatar_url)
-                    xd = await self.send_message(message.channel, embed=em_before)
+                    help_embed = await self.send_message(message.channel, embed=em_before)
                     await asyncio.sleep(0.1)
                     await self.send_message(message.author, HELP_MESSAGE1)
                     await self.send_message(message.author, HELP_MESSAGE2)
-                    await self.edit_message(xd, embed=em_after)
+                    await self.edit_message(help_embed, embed=em_after)
                 else:
                     return
             elif command == 'lvl':
@@ -1160,7 +1159,6 @@ class CarlBot(discord.Client):
                     return
             elif command == 'g':
                 if message.author.id in self.blacklist:
-                    await self.send_message(message.channel, "{} is blacklisted from the google command, wonder why".format(message.author.name))
                     return
                 user = message.author
                 usercolor = user.color
