@@ -300,6 +300,13 @@ class CarlBot(discord.Client):
                 N = (N + 1) % 8
                 em.add_field(name="In three weeks", value="**EU:**\n{}\n{}\n{}\n\n**NA:**\n{}\n{}\n{}".format(AFFIX1[E], AFFIX2[E], AFFIX3[E], AFFIX1[N], AFFIX2[N], AFFIX3[N]), inline=True)
                 await self.send_message(message.channel, embed=em)
+            elif command == 'nicknames':
+                if message.mentions:
+                    user = message.mentions[0]
+                else:
+                    user = message.author
+                nicks = ', '.join(self.userinfo[user.id]["names"])
+                await self.send_message(message.channel, "**{}**".format(nicks))
             elif command == 'ignorechannel':
                 if message.author.id not in self.whitelist:
                     return
@@ -1029,12 +1036,12 @@ class CarlBot(discord.Client):
             elif command == 'postcount':
                 user = message.author
                 if len(args) == 0:
-                    await self.send_message(message.channel, "**{0}** posts by **{1}** chatters.".format(sum(self.postcount.values()), len(self.postcount)))
+                    await self.send_message(message.channel, "**{0}** has posted **{1}** messages.".format(user.display_name, self.postcount[user.id]))
                 elif len(args) == 1:
                     post_this = ""
                     if message.mentions:
                         user = message.mentions[0]
-                        await self.send_message(message.channel, "{0} has posted {1} messages.".format(user.display_name, self.postcount[user.id]))
+                        await self.send_message(message.channel, "**{0}** has posted **{1}** messages.".format(user.display_name, self.postcount[user.id]))
                     elif args[0].lower() in ['leaderboard', 'leaderboards', 'top', 'highscore', 'highscores', 'hiscores']:
                         leaderboard = self.postcount
                         post_this = ""
