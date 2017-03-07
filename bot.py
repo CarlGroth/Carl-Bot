@@ -78,7 +78,7 @@ class CarlBot(discord.Client):
             if member.id not in self.userinfo:
                 self.userinfo[member.id] = {"names": [member.name],
                                             "roles": [x.name for x in member.roles if x.name != "@everyone"]}
-            else:
+            elif member.name not in self.userinfo[member.id]["names"]:
                 self.userinfo[member.id]["names"].append(member.name)
         write_json('users.json', self.userinfo)
 
@@ -187,6 +187,12 @@ class CarlBot(discord.Client):
             return
         if "@here" in message.content:
             return
+        if message.channel.id == "217375065346408449":
+            if (message.content.startswith("http://") or message.content.startswith("https://") or message.attachments):
+                return
+            else:
+                await self.delete_message(message)
+                await self.send_message(message.author, "No text allowed in #meme-archive")
         if random.randint(1, 10000) == 1:
             legendaryRole = discord.utils.get(message.server.roles, name='Legendary')
             await self.add_roles(message.author, legendaryRole)
@@ -309,7 +315,7 @@ class CarlBot(discord.Client):
                 else:
                     user = message.author
                 nicks += ', '.join(self.userinfo[user.id]["names"])
-                await self.send_message(message.channel, "**Nickname history for {}#{}:**\n{}".format(user.name, user.discriminator, nicks))
+                await self.send_message(message.channel, "**Nickname history for {}#{}:**\n{}".format(user.name, user.discriminator, nicks.replace("_", "\_")))
             elif command == 'ignorechannel':
                 if message.author.id not in self.whitelist:
                     return
