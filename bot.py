@@ -301,12 +301,15 @@ class CarlBot(discord.Client):
                 em.add_field(name="In three weeks", value="**EU:**\n{}\n{}\n{}\n\n**NA:**\n{}\n{}\n{}".format(AFFIX1[E], AFFIX2[E], AFFIX3[E], AFFIX1[N], AFFIX2[N], AFFIX3[N]), inline=True)
                 await self.send_message(message.channel, embed=em)
             elif command == 'nicknames':
+                nicks = ""
                 if message.mentions:
                     user = message.mentions[0]
+                    if user.id == message.author.id:
+                        nicks += "**No mention required for yourself!**\n"
                 else:
                     user = message.author
-                nicks = ', '.join(self.userinfo[user.id]["names"])
-                await self.send_message(message.channel, "**{}**".format(nicks))
+                nicks += ', '.join(self.userinfo[user.id]["names"])
+                await self.send_message(message.channel, "**Nickname history for {}#{}:**\n{}".format(user.name, user.discriminator, nicks))
             elif command == 'ignorechannel':
                 if message.author.id not in self.whitelist:
                     return
