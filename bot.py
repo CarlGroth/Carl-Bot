@@ -78,7 +78,7 @@ class CarlBot(discord.Client):
             if member.id not in self.userinfo:
                 self.userinfo[member.id] = {"names": [member.name],
                                             "roles": [x.name for x in member.roles if x.name != "@everyone"]}
-            elif member.name not in self.userinfo[member.id]["names"]:
+            else:
                 self.userinfo[member.id]["names"].append(member.name)
         write_json('users.json', self.userinfo)
 
