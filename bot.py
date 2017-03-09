@@ -39,7 +39,35 @@ def google_search(search_term, api_key, cse_id, **kwargs):
     res = service.cse().list(q=search_term, cx=cse_id, **kwargs).execute()
     return res['items']
 
-
+def beaufort_scale(speed):
+    if speed < 0:
+        return "I don't fucking know"
+    elif speed <= 0.3:
+        return "Calm"
+    elif speed <= 1.5:
+        return "Light air"
+    elif speed <= 3.3:
+        return "Light breeze"
+    elif speed <= 5.5:
+        return "Gentle breeze"
+    elif speed <= 7.9:
+        return "Moderate breeze"
+    elif speed <= 10.7:
+        return "Fresh breeze"
+    elif speed <= 13.8:
+        return "Strong breeze"
+    elif speed <= 17.1:
+        return "Moderate gale"
+    elif speed <= 20.7:
+        return "Gale"
+    elif speed <= 24.4:
+        return "Strong gale"
+    elif speed <= 28.4:
+        return "Storm"
+    elif speed <= 32.6:
+        return "Violent storm"
+    else:
+        return "Hurricane force"
 
 
 class CarlBot(discord.Client):
@@ -192,7 +220,7 @@ class CarlBot(discord.Client):
                 return
             else:
                 await self.delete_message(message)
-                await self.send_message(message.author, "No text allowed in #meme-archive")
+                await self.send_message(message.author, "No text allowed in #meme-archive (links and file uploads only)")
         if random.randint(1, 10000) == 1:
             legendaryRole = discord.utils.get(message.server.roles, name='Legendary')
             await self.add_roles(message.author, legendaryRole)
@@ -270,7 +298,7 @@ class CarlBot(discord.Client):
                 em.add_field(name="Temperature", value="{0:.1f}°C\n{1:.1f}°F".format(temp_c, temp_f), inline=True)
                 em.add_field(name="Description", value=weather.capitalize(), inline=True)
                 em.add_field(name="Humidity", value="{}%".format(humidity), inline=True)
-                em.add_field(name="Wind speed", value="{}m/s".format(windspeed), inline=True)
+                em.add_field(name="Wind speed", value="{}m/s\n{}".format(windspeed, beaufort_scale(windspeed)), inline=True)
                 em.set_thumbnail(url=user.avatar_url)
                 await self.send_message(message.channel, embed=em)
                     
@@ -421,32 +449,60 @@ class CarlBot(discord.Client):
                     tagreturn = ""
                     bad_coding_practice_variable = ""
                     i = 1
-                    for tag in sorted(self.tags, key=self.tags.get, reverse=True):
+                    for tag in sorted(taglist, reverse=False):
                         if fuzz.partial_ratio(query, tag) > 80:
-                            if i <= 15:
-                                tagreturn += "{}. {}\n".format(i, tag)
-                                bad_coding_practice_variable += "{}\n".format(tag)
-                                i += 1
-                            else:
-                                i += 1
-                        #elif fuzz.partial_ratio(query, tag) > 75:
-                        #    tagreturn75 += "{}\n".format(tag)
+                            tagreturn += "{}. {}\n".format(i, tag)
+                            bad_coding_practice_variable += "{}\n".format(tag)
+                            i += 1
+                        else:
+                            continue
+                    
+                    list_of_returns = tagreturn.splitlines()
+                    tempmessage = ""
+                    final_list = []
+                    xd = 0
+                    for line in list_of_returns:
+                        if xd < 14:
+                            tempmessage += "{}\n".format(line)
+                            xd += 1
+                        else:
+                            tempmessage += "{}\n".format(line)
+                            final_list.append(tempmessage)
+                            tempmessage = ""
+                            xd = 0
+                    final_list.append(tempmessage)
+                    print(final_list)
+                
                     if len(tagreturn) == 0:
                         await self.send_message(message.channel, "Sorry, couldn't find any matching tags.")
                     else:
-                        em = discord.Embed(title="Search results (80+):", description=tagreturn, colour=0xffffff)
+                        em = discord.Embed(title="Search results:", description=final_list[0], colour=0xffffff)
                         em.set_author(name=message.author.name, icon_url=message.author.avatar_url, url=message.author.avatar_url)
-                        #em.add_field(name="Results (75+)", value=tagreturn75, inline=True)
                         em.set_footer(text="{} results. (page {}/{})".format(i-1, 1, math.ceil((i-1)/15)))
-                        await self.send_message(message.channel, embed=em)
+                        initial_message = await self.send_message(message.channel, embed=em)
                         def check(mesg):
                             if mesg.content.isdigit():
                                 return True
-                        msg = await self.wait_for_message(author=message.author, check=check)
-                        if msg.content.isdigit():
-                            listoflines = bad_coding_practice_variable.split('\n')
-                            print(listoflines[int(msg.content)-1])
-                            await self.send_message(message.channel, self.tags[listoflines[int(msg.content)-1]])
+                            elif mesg.content.startswith("p"):
+                                return True
+                        
+                        for p in range(5):
+                            msg = await self.wait_for_message(author=message.author, timeout=15)
+                            if msg.content.isdigit():
+                                listoflines = bad_coding_practice_variable.split('\n')
+                                print(listoflines[int(msg.content)-1])
+                                await self.send_message(message.channel, self.tags[listoflines[int(msg.content)-1]])
+                                return
+                            elif msg.content.startswith("p"):
+                                try:
+                                    page_number = int(msg.content[1:])
+                                    em2 = discord.Embed(title="Search results:", description=final_list[page_number-1], colour=0xffffff)
+                                    em2.set_author(name=message.author.name, icon_url=message.author.avatar_url, url=message.author.avatar_url)
+                                    em2.set_footer(text="{} results. (page {}/{})".format(i-1, page_number, math.ceil((i-1)/15)))
+                                    await self.edit_message(initial_message, embed=em2)
+                                except Exception as e:
+                                    print(e)
+                                    return
                 elif args[0] == "+=":
                     tagname = re.sub("[^a-z0-9_-]", "", args[1].lower())
                     content = message.content[(9+len(args[1])):]
@@ -712,7 +768,7 @@ class CarlBot(discord.Client):
                     if bioname in self.bio:
                         if len(self.bio[bioname]) < 1750:
                             print("hey, what the fuck")
-                            await self.send_message(message.channel, "Bio for {0}:\n{1}".format(message.author, self.bio[bioname]))
+                            await self.send_message(message.channel, "Bio for {0}:\n{1}".format(user.display_name, self.bio[bioname]))
                         else:
                             #Blame kinny T for this abomination
                             listOfLines = self.bio[bioname]
