@@ -2,7 +2,7 @@ logs
 __pycache__
 .vscode
 sensitivedata.py
-weather.py
+users.json
 xdman.py
 responses.py
 weather.json    

@@ -552,7 +552,7 @@ class CarlBot(discord.Client):
                                 await self.send_message(message.channel, "`{}` was appended to the tag: {}".format(content, tagname))
                         else:
                             return
-                    elif len(message.content) < 1750:
+                    elif (len(message.content) < 1750) and (len(tagname) < 50):
                         tagname = re.sub("[^a-z0-9_-]", "", args[1].lower())
                         if tagname == '':
                             return
@@ -1056,6 +1056,11 @@ class CarlBot(discord.Client):
                     postcount = "{}\nrank {}".format(self.postcount[user.id], (sorted(self.postcount, key=self.postcount.get, reverse=True).index(user.id)+1))
                 except KeyError:
                     postcount = "0 or bot"
+
+                try:
+                    avatar = user.avatar_url
+                except:
+                    avatar = user.default_avatar_url
                 try:
                     joined_at = user.joined_at
                     days_since = "({} days ago)".format((datetime.today() - user.joined_at).days)
@@ -1097,6 +1102,7 @@ class CarlBot(discord.Client):
                 em.add_field(name="Sicklad", value=sicklad, inline=True)
                 em.add_field(name="Created at", value="{} {}".format(created.replace(" ", "\n"), days_since_creation), inline=True)
                 em.add_field(name="Joined at", value="{} {}".format(joined_at.replace(" ", "\n"), days_since), inline=True)
+                em.set_thumbnail(url=avatar)
                 await self.send_message(message.channel, embed=em)
             elif command == 'postcount':
                 user = message.author
