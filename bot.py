@@ -209,9 +209,7 @@ class CarlBot(discord.Client):
             return
         if message.channel.is_private:
             print(message.content + " [author: {}]".format(message.author))
-            return
         if "@everyone" in message.content:
-            print("at everyone in sdmasoidj")
             return
         if "@here" in message.content:
             return
@@ -611,14 +609,13 @@ class CarlBot(discord.Client):
                     post_this += "**{0}** coins in total spread across **{1}** retards.".format(sum(self.retard.values()),len(self.retard))
                     await self.send_message(message.channel, post_this)
                 try:
-                    userID = ''.join(message.mentions[0].id)
-                    userID = re.sub("[^0-9]", "", userID)
+                    userID = message.mentions[0].id
                     if userID == '':
                         return
                     elif userID not in self.retard:
                         self.retard[userID] = 1
                         write_json('retard.json', self.retard)
-                        await self.send_message(message.channel, "Welcome to the retard club, {0}".format(args[0]))
+                        await self.send_message(message.channel, "Welcome to the retard club, **{0}**".format(message.mentions[0].display_name))
                     else:
                         if len(args) == 1:
                             self.retard[userID] += 1
@@ -1102,7 +1099,7 @@ class CarlBot(discord.Client):
                 em.add_field(name="Sicklad", value=sicklad, inline=True)
                 em.add_field(name="Created at", value="{} {}".format(created.replace(" ", "\n"), days_since_creation), inline=True)
                 em.add_field(name="Joined at", value="{} {}".format(joined_at.replace(" ", "\n"), days_since), inline=True)
-                em.set_thumbnail(url=avatar)
+                #em.set_thumbnail(url=avatar)
                 await self.send_message(message.channel, embed=em)
             elif command == 'postcount':
                 user = message.author
@@ -1115,12 +1112,11 @@ class CarlBot(discord.Client):
                         await self.send_message(message.channel, "**{0}** has posted **{1}** messages.".format(user.display_name, self.postcount[user.id]))
                     elif args[0].lower() in ['leaderboard', 'leaderboards', 'top', 'highscore', 'highscores', 'hiscores']:
                         leaderboard = self.postcount
-                        post_this = ""
                         rank = 1
                         for w in sorted(leaderboard, key=leaderboard.get, reverse=True):
-                            if rank < 11:
+                            if rank <= 20:
                                 try:
-                                    post_this += ("{0}. **{1}** = {2}\n".format(rank, self.get_server('207943928018632705').get_member(w).name, leaderboard[w]))
+                                    post_this += ("{0}. **{1}:** {2}\n".format(rank, self.get_server('207943928018632705').get_member(w).name, leaderboard[w]))
                                     rank += 1
                                 except AttributeError:
                                     continue
