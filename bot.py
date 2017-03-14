@@ -1129,6 +1129,15 @@ class CarlBot(discord.Client):
                 else:
                     return
             
+            # elif command == 'pure':
+            #     pure_role = discord.utils.get(message.server.roles, name='Pure')
+            #     member_roles = message.author.roles
+            #     if pure_role in member_roles:
+            #         await self.remove_roles(message.author, pure_role)
+            #         await self.send_message(message.channel, "**{}**, you are no longer pure. :smiling_imp:".format(message.author.display_name))
+            #     else:
+            #         await self.add_roles(message.author, pure_role)
+            #         await self.send_message(message.channel, "**{}**, you are now pure. :angel:".format(message.author.display_name))
             elif command == 'd':
                 #if message.author.id != CARL_DISCORD_ID:
                 #    return
@@ -1147,10 +1156,11 @@ class CarlBot(discord.Client):
                     em = discord.Embed(title=wordname, description="/{}/".format(pronounciation), colour=usercolor)
                     em.set_author(name=user.display_name, icon_url=user.avatar_url, url=user.avatar_url)
                     x = jsonthing["results"][0]["lexicalEntries"]
-                    xd = 1
+                    
+                    f = 0
                     for i in x:
                         print(i)
-                        f = 0
+                        
                         #for sd in range(3):
                         word_type = jsonthing["results"][0]["lexicalEntries"][f]["lexicalCategory"]
                         print("this is the word type: " + word_type)
@@ -1158,20 +1168,20 @@ class CarlBot(discord.Client):
                             
                             d = jsonthing["results"][0]["lexicalEntries"][f]["entries"][0]["senses"][0]["definitions"]
                             d = ''.join(d)
-                            definition = "{}. {}\n".format(xd, ''.join(i["entries"][0]["senses"][0]["definitions"]))
+                            definition = "{}\n".format( ''.join(i["entries"][0]["senses"][0]["definitions"]))
                             try:
                                 definitions[word_type] += definition
                             except KeyError:
                                 definitions[word_type] = definition
-                            xd += 1
+                            
                             f += 1
                         except IndexError:
                             pass
                 except Exception as e:
-                    await self.send_message(message.channel, e)
+                    await self.send_message(message.channel, "No definition found, blame Oxford Dictionaries")
                     return
                 for box in definitions:
-                    em.add_field(name=box, value=definitions[box], inline=False)
+                    em.add_field(name=box, value=definitions[box].capitalize(), inline=False)
                 print(definitions)
                 await self.send_message(message.channel, embed=em)
             elif command == 'convert':
