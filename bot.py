@@ -69,6 +69,7 @@ loaded_commands = [
     "uptime",
     "pickmyspec",
     "pickmyclass",
+    "pickmygold",
     "g",
     "d",
     "help",
@@ -367,6 +368,34 @@ class CarlBot(discord.Client):
         await self.send_message(message.channel, random.choice(WOW_SPECS))
     async def pickmyclass(self, channel):
         await self.send_message(message.channel, random.choice(WOW_CLASSES))
+    async def pickmygold(self, channel):
+        Heroes = [
+            "Zenyatta",
+            "Mercy",
+            "Ana",
+            "Symmetra",
+            "Lucio",
+            "D.Va",
+            "Orisa",
+            "Reinhardt",
+            "Roadhog",
+            "Winston",
+            "Zarya",
+            "Bastion",
+            "Hanzo",
+            "Junkrat",
+            "Mei",
+            "Torbjorn",
+            "Widowmaker",
+            "Genji lmao",
+            "McCree",
+            "Pharah",
+            "Reaper",
+            "Soldier: 76",
+            "Sombra",
+            "Tracer"
+        ]
+        await self.send_message(message.channel, random.choice(Heroes))
     async def uptime(self, channel):
         uptime = str(timedelta(seconds=((time.time() + 3600) - self.starttime)))
         uptime = re.sub("\.(.*)", "", uptime)
