@@ -33,8 +33,11 @@ aliased_commands = {
     "affixes":"affix",
     "m+":"affix",
     "8ball":"eightball",
-    "ban":"cmd_ban"
+    "pickmyhero":"pickmygold",
+    "pick":"choose",
+    "current_year":"date"
 }
+
 
 loaded_commands = [
     "ping",
@@ -69,12 +72,14 @@ loaded_commands = [
     "uptime",
     "pickmyspec",
     "pickmyclass",
+    "pickmygold",
     "g",
     "d",
     "help",
     "date",
     "sc",
     "wl",
+    "echo",
     "bl",
     "eightball"
 ]
@@ -127,25 +132,41 @@ class CarlBot(discord.Client):
     def log(self, message):
         with open("logs/{}.txt".format(message.author.id), "a", encoding="utf-8") as f:
             f.write("{}\n".format(message.clean_content))
+    # maybe one day
+    # async def add_bio(message):
+    #     bio_add = ""
+    #     if message.attachments:
+    #         bio_add += f"{message.attachments[0]['url']} "
+    #     bio_add += message.content[7:]
+    #     self.biodata[message.author.id] = bio_add
+    #     write_json('bio.json', self.biodata)
+    #     if message.author.id in self.biodata:
+    #         await self.send_message(message.channel, "Bio succesfully replaced")
+    #     else:
+    #         await self.send_message(message.channel, "Bio succesfully added")
 
-    async def on_member_ban(self, member):
-        log_channel = discord.utils.get(member.server.channels, name='log')
-        await self.send_message(log_channel, "**{}** was just banned from the server.".format(member.display_name))
+
 
     async def userfix(self, member):
         if member.id not in self.userinfo:
             self.userinfo[member.id] = {"names": [member.name],
                                         "roles": [x.name for x in member.roles if x.name != "@everyone"]}
         write_json('users.json', self.userinfo)
-
+    async def on_member_ban(self, member):
+        general_channel = discord.utils.get(member.server.channels, name="general")
+        await self.send_message(general_channel, f"**{member.name}#{member.discriminator}** was just banned from the server.")
+    async def on_member_unban(self, server, user):
+        general_channel = discord.utils.get(server.channels, name="general")
+        await self.send_message(general_channel, f"**{user.name}#{user.discriminator}** was just unbanned from the server.")
     async def on_member_update(self, before, after,):
         log_channel = discord.utils.get(before.server.channels, name='log')
-        if before.nick != after.nick:
+        if before.display_name != after.display_name:
             await self.send_message(log_channel, ":spy: **{0}#{1}** changed their nickname:\n**Before:** {2}\n**+After:** {3}".format(before.name, before.discriminator, before.display_name, after.display_name))
             await self.userfix(before)
             if after.display_name not in self.userinfo[before.id]["names"]:
                 self.userinfo[before.id]["names"].append(after.display_name)
             else:
+                #duplicate nicknames are lame
                 old_index = self.userinfo[before.id]["names"].index(after.display_name)
                 self.userinfo[before.id]["names"].pop(old_index)
                 self.userinfo[before.id]["names"].append(after.display_name)
@@ -177,8 +198,8 @@ class CarlBot(discord.Client):
             await asyncio.sleep(1)
             await self.change_nickname(member, self.userinfo[member.id]["names"][-1])
 
-    async def on_member_remove(self, memberl, server):
-        log_channel = discord.utils.get(server.channels, name='log')
+    async def on_member_remove(self, member):
+        log_channel = discord.utils.get(member.server.channels, name='log')
         fmt = ":wave: **{0}#{1}** *({2})* left the server at `{3}`<@{4}> <@{5}> :wave:"
         await self.send_message(log_channel, fmt.format(member.name, member.discriminator, member.id, time.strftime("%Y-%m-%d %H:%M:%S (central carl time)."), CARL_DISCORD_ID, "158370770068701184"))
     async def on_message_delete(self, message):
@@ -196,7 +217,7 @@ class CarlBot(discord.Client):
             if message.content.startswith("++"):
                 return
         destination = discord.utils.get(message.server.channels, name='log')
-        poststring = ":x: `{1}` **{0}** Deleted their message:  ```{2}``` in `{3}`".format(message.author.name, time.strftime("%H:%M:%S"), message.clean_content, message.channel)
+        poststring = ":x: `{1}` **{0}** Deleted their message:  ```{2}``` in `{3}`".format(message.author.display_name, time.strftime("%H:%M:%S"), message.clean_content, message.channel)
         if message.attachments:
             poststring += "\n{}".format(message.attachments[0]['url'])
 
@@ -237,16 +258,17 @@ class CarlBot(discord.Client):
                 self.userinfo[member.id]["names"].append(member.name)
         write_json('users.json', self.userinfo)
 
-    async def ping(self, channel, message):
+    async def cmd_ping(self, channel, message):
         msg = await self.send_message(channel, "pong!")
         q_time = message.timestamp
         m_time = msg.timestamp
         diff_time = m_time - q_time
         d_time = diff_time.microseconds / 1000
         await self.edit_message(msg, "pong! {}ms".format(int(d_time)))
-    async def eightball(self, channel):
-        await self.send_message(channel, (random.choice(responses)))
-    async def bl(self, mentions, author, leftover_args):
+    async def cmd_eightball(self, channel, author):
+        response = random.choice(responses)
+        await self.send_message(channel, f":8ball: | {response}, **{author.display_name}**")
+    async def cmd_bl(self, mentions, author, leftover_args):
         if author.id != CARL_DISCORD_ID:
             return
         if not mentions:
@@ -269,7 +291,7 @@ class CarlBot(discord.Client):
             write_json('blacklist.json', self.blacklist)
         await self.send_message(discord.Object(id='249336368067510272'), fmt.format(BLACKED))
 
-    async def wl(self, mentions, author, leftover_args):
+    async def cmd_wl(self, mentions, author, leftover_args):
         if author.id != CARL_DISCORD_ID:
             return
         if not mentions:
@@ -294,9 +316,9 @@ class CarlBot(discord.Client):
             return
         await self.send_message(discord.Object(id='249336368067510272'), fmt.format(whitelisted))
 
-    async def date(self, channel):
+    async def cmd_date(self, channel):
         await self.send_message(channel, "It's {0}".format(time.strftime("%Y-%m-%d\n%H:%M:%S (central carl time).")))
-    async def help(self, author, channel, leftover_args):
+    async def cmd_help(self, author, channel, leftover_args):
         if len(leftover_args) == 0:
             user = author
             em_before = discord.Embed(title="Help", description="Processing command...", colour=0x42f4dc)
@@ -310,7 +332,7 @@ class CarlBot(discord.Client):
             await self.edit_message(help_embed, embed=em_after)
         else:
             return
-    async def d(self, author, channel, message):
+    async def cmd_d(self, author, channel, message):
         language = 'en'
         definitions = {}
         try:
@@ -346,7 +368,7 @@ class CarlBot(discord.Client):
         for box in definitions:
             em.add_field(name=box, value=definitions[box].capitalize(), inline=False)
         await self.send_message(message.channel, embed=em)
-    async def g(self, author, channel, message):
+    async def cmd_g(self, author, channel, message):
         if author.id in self.blacklist:
             return
         user = author
@@ -363,11 +385,11 @@ class CarlBot(discord.Client):
             postme += "{}\n".format(url)
         em.add_field(name="See also", value=postme, inline=True)
         await self.send_message(channel, embed=em)
-    async def pickmyspec(self, channel):
-        await self.send_message(message.channel, random.choice(WOW_SPECS))
-    async def pickmyclass(self, channel):
-        await self.send_message(message.channel, random.choice(WOW_CLASSES))
-    async def uptime(self, channel):
+    async def cmd_pickmyspec(self, channel):
+        await self.send_message(channel, random.choice(WOW_SPECS))
+    async def cmd_pickmyclass(self, channel):
+        await self.send_message(channel, random.choice(WOW_CLASSES))
+    async def cmd_uptime(self, channel):
         uptime = str(timedelta(seconds=((time.time() + 3600) - self.starttime)))
         uptime = re.sub("\.(.*)", "", uptime)
         currtime = time.strftime("%H:%M:%S", time.gmtime(time.time() + 3600))
@@ -377,13 +399,13 @@ class CarlBot(discord.Client):
         em.add_field(name="Current uptime", value=uptime, inline=True)
         em.add_field(name="Start time", value=started_time, inline=True)
         await self.send_message(channel, embed=em)
-    async def sc(self, message, channel):
+    async def cmd_sc(self, message, channel):
         smallcaps_string = smallcaps(message.clean_content[4:])
         await self.send_message(message.channel, smallcaps_string)
-    async def ae(self, message, channel):
+    async def cmd_ae(self, message, channel):
         hehe = aesthetics(message.clean_content[4:])
         await self.send_message(channel, hehe)
-    async def cts(self, leftover_args, channel):
+    async def cmd_cts(self, leftover_args, channel):
         stream = " {1}\u3000{0}\n   {1}{0}\n\u3000 {0}\n   {0}{1}\n {0}\u3000{1}\n{0}\u3000\u3000{1}\n{0}\u3000\u3000{1}\n {0}\u3000{1}\n  {0} {1}\n\u3000  {1}\n\u3000{1} {0}\n {1}\u3000 {0}\n{1}\u3000\u3000{0}\n{1}   \u3000 {0}\n {1}\u3000  {0}\n\u3000{1}{0}\n     {0}{1}\n  {0}    {1}"
         if len(leftover_args) == 0:
             whale = "<:Whale:239954158772289537>"
@@ -391,14 +413,13 @@ class CarlBot(discord.Client):
         elif len(leftover_args) == 1:
             whale = "<:Whale:239954158772289537>"
             cookie = str(leftover_args[0])
-            print(leftover_args[0])
         elif len(leftover_args) == 2:
             whale = str(leftover_args[0])
             cookie = str(leftover_args[1])
         else:
             return
         await self.send_message(channel, stream.format(whale, cookie))
-    async def sicklad(self, message, leftover_args, channel, author, mentions):
+    async def cmd_sicklad(self, message, leftover_args, channel, author, mentions):
         if len(leftover_args) == 0:
             await self.send_message(channel, "You sure are.")
         elif leftover_args[0].lower() in ['leaderboard', 'leaderboards', 'top', 'highscore', 'highscores', 'hiscores']:
@@ -444,7 +465,7 @@ class CarlBot(discord.Client):
             return
         except discord.HTTPException:
             return
-    async def retard(self, message, leftover_args, channel, mentions):
+    async def cmd_retard(self, message, leftover_args, channel, mentions):
         if len(leftover_args) == 0:
             await self.send_message(channel, "You sure are.")
         elif leftover_args[0].lower() in ['leaderboard', 'leaderboards', 'top', 'highscore', 'highscores', 'hiscores']:
@@ -482,7 +503,7 @@ class CarlBot(discord.Client):
                     await self.send_message(message.channel, "**{0}** just tipped **{1} 1** retard coin, reason: `{2}`\n**{1}** now has **{3}** coins.".format(message.author.name.replace("_", "\_"), message.mentions[0].name.replace("_", "\_"), reason, self.retardcoins[userID]))
         except:
             return
-    async def avatar(self, message):
+    async def cmd_avatar(self, message):
         if message.author.id != CARL_DISCORD_ID:
             return
         if message.attachments:
@@ -495,10 +516,10 @@ class CarlBot(discord.Client):
                     await self.edit_profile(avatar=await res.read())
         except Exception as e:
             print(e)
-    async def m(self, message, channel):
+    async def cmd_m(self, message, channel):
         if message.author.id == CARL_DISCORD_ID:
             await self.send_message(channel, "{}".format(eval(message.content[3:])))
-    async def choose(self, channel, leftover_args):
+    async def cmd_choose(self, channel, leftover_args):
         if len(leftover_args) == 0:
             return
         choices = leftover_args
@@ -506,11 +527,12 @@ class CarlBot(discord.Client):
         choices = choices.split(",")
         await self.send_message(channel, random.choice(choices))
 
-    async def forceban(self, author, server, leftover_args):
+    async def cmd_forceban(self, author, server, leftover_args):
         if author.id != CARL_DISCORD_ID:
             return
-        await self.http.ban(leftover_args[0], server.id, 0)
-    async def tag(self, channel, author, leftover_args, message):
+        for i in range(len(leftover_args)):
+            await self.http.ban(leftover_args[i], server.id, 0)
+    async def cmd_tag(self, channel, author, leftover_args, message):
         if message.mentions:
             return
         tagreturn = ' '.join(leftover_args[2:])
@@ -593,7 +615,6 @@ class CarlBot(discord.Client):
                     #if the message is a number, match it with the associated tag
                     if msg.content.isdigit():
                         listoflines = bad_coding_practice_variable.split('\n')
-                        print(listoflines[int(msg.content)-1])
                         await self.send_message(message.channel, self.taglist[listoflines[int(msg.content)-1]])
                         return
                     #this is for pages
@@ -680,107 +701,130 @@ class CarlBot(discord.Client):
                 await self.send_message(channel, self.taglist[tagname])
             else:
                 await self.send_message(channel, "No such tag")
-    async def speak(self, mentions, leftover_args, message, author, channel):
+    async def cmd_echo(self, leftover_args, message):
+        destination = message.channel_mentions[0]
+        await self.send_message(destination, ' '.join(leftover_args[1:]))
+    async def cmd_speak(self, mentions, leftover_args, message, author, channel):
+        repeats = 3
         if not mentions and len(leftover_args) == 0:
             victim = author.id
         elif not mentions and len(leftover_args) == 1:
-            print(leftover_args[0])
-            victim = leftover_args[0]
-        else:
+            victim = author.id
+            try:
+                id_or_repeats = int(leftover_args[0])
+                if id_or_repeats > 20:
+                    repeats = 20
+                    if id_or_repeats > 100000:
+                        victim = id_or_repeats   
+                else:
+                    repeats = id_or_repeats
+                    victim = author.id
+            except:
+                return
+        elif mentions:
             victim = mentions[0].id
-        with open("logs/{}.txt".format(victim), encoding="utf-8") as f:
-            text = f.read()
-        text_model = markovify.NewlineText(text)
-        speech = "**{}:**\n".format(author.name)
-        for i in range(3):
+        else:
+            return
+        try:
+            with open("logs/{}.txt".format(victim), encoding="utf-8") as f:
+                text = f.read()
+            text_model = markovify.NewlineText(text)
+            speech = "**{}:**\n".format(author.name)
+        except:
+            await self.send_message(channel, f"No file matching {id_or_repeats}")
+        for i in range(repeats):
             try:
                 variablename = text_model.make_short_sentence(140, state_size=3).replace("@", "@ ")
-                print(variablename)
+                #print(variablename)
                 try:
                     id_mention = re.search("<@ [!]?(.*)>", variablename)
-                    print(id_mention)
                     id_mention = id_mention.group(1)
-                    print(id_mention)
                     id_name = self.get_server("207943928018632705").get_member(str(id_mention)).name
-                    print("id name = {}".format(id_name))
                     add_this = re.sub("<@ [!]?.*>", id_name, variablename)
-                    print(add_this)
                     speech += "{}\n\n".format(add_this)
                 except AttributeError:
-                    print("Attributeerror xd")
                     speech += "{}\n\n".format(variablename)
             except KeyError:
                 return
             except AttributeError:
                 pass
         await self.send_message(channel, speech)
-    async def spook(self, mentions, channel):
-        if message.mentions:
+    async def cmd_spook(self, mentions, channel):
+        if mentions:
             await self.send_message(channel, "you have been spooked, **{}** ! o no :skull_crossbones:".format(mentions[0].display_name))
         else:
             await self.send_message(channel, "boo!")
-    async def bio(self, message, leftover_args):
+    async def cmd_bio(self, message, leftover_args):
         premium_member = False
+        bio_appendage = ""
         if message.mentions:
             user = message.mentions[0]
         else:
             user = message.author
         if user.id in self.whitelist:
             premium_member = True
-        if len(leftover_args) == 1 and not message.mentions:
+        if len(leftover_args) == 1 and not message.mentions and not message.attachments:
             await self.send_message(message.channel, "Empty bio <:FailFish:235926308071276555>")
+            return
+        elif message.attachments:
+            bio_appendage += f"{message.attachments[0]['url']} "
         if leftover_args and not message.mentions:
             if leftover_args[0] == '+':
+                bio_appendage += message.clean_content[7:]
                 if message.author.id in self.biodata:
                     def check(mesg):
-                        if mesg.content in ['r', 'y', 'yes', 'replace', 'c', 'n', 'no', 'cancel', 'a']:
-                            return True
+                        return True
                     await self.send_message(message.channel, "Bio already exists. **__r__**eplace, **__c__**ancel or **__a__**dd to? (r/c/a)")
                     msg = await self.wait_for_message(author=message.author, check=check)
                     if msg.content.lower() in ['r', 'y', 'yes', 'replace']:
-                        self.biodata[message.author.id] = message.clean_content[7:]
+                        self.biodata[message.author.id] = bio_appendage
                         write_json('bio.json', self.biodata)
                         await self.send_message(message.channel, "Bio succesfully replaced.")
                     elif msg.content.lower() in ['c', 'n', 'no', 'cancel']:
                         await self.send_message(message.channel, "Bio unchanged.")
                     elif msg.content.lower() == 'a':
                         if premium_member:
-                            self.biodata[message.author.id] += "\n{}".format(message.clean_content[7:])
+                            self.biodata[message.author.id] += "\n{}".format(bio_appendage)
                             write_json('bio.json', self.biodata)
+                            await self.send_message(message.channel, "`{0}` was appended to {1.name}'s bio.".format(message.clean_content[7:], message.author))
                         elif not premium_member and (len(message.clean_content[7:]) + len(self.biodata[message.author.id])) < 2000:
-                            self.biodata[message.author.id] += "\n{}".format(message.clean_content[7:])
+                            self.biodata[message.author.id] += "\n{}".format(bio_appendage)
                             write_json('bio.json', self.biodata)
+                            await self.send_message(message.channel, "`{0}` was appended to {1.name}'s bio.".format(message.clean_content[7:], message.author))
                         else:
                             return
-                        await self.send_message(message.channel, "`{0}` was appended to {1.name}'s bio.".format(message.clean_content[7:], message.author))
+                        
+                    else:
+                        return
+                        
                 else:
                     if len(message.content) < 1750 or premium_member:
-                        self.biodata[message.author.id] = message.clean_content[7:]
+                        self.biodata[message.author.id] = bio_appendage
                         write_json('bio.json', self.biodata)
                         await self.send_message(message.channel, "**{}'s** bio was added".format(message.author))
             elif leftover_args[0] == "+=":
+                bio_appendage = message.clean_content[8:]
                 if message.author.id not in self.whitelist:
-                    if (len(message.clean_content[8:]) + len(self.biodata[message.author.id])) < 2000:
+                    if (len(bio_appendage) + len(self.biodata[message.author.id])) < 2000:
                         try:
-                            self.biodata[message.author.id] += "\n{}".format(message.clean_content[8:])
+                            self.biodata[message.author.id] += "\n{}".format(bio_appendage)
                         except KeyError:
-                            self.biodata[message.author.id] = "{}".format(message.clean_content[8:])
+                            self.biodata[message.author.id] = "{}".format(bio_appendage)
                         write_json('bio.json', self.biodata)
-                        await self.send_message(message.channel, "`{0}` was appended to {1.name}'s bio.".format(message.clean_content[8:], message.author))
+                        await self.send_message(message.channel, "`{0}` was appended to {1.name}'s bio.".format(bio_appendage, message.author))
                     else:
                         await self.send_message(message.channel, "Too long")
                 else:
-                    if len(leftover_args) == 1:
+                    if len(leftover_args) == 1 and not message.attachments:
                         await self.send_message(message.channel, "retard <:FailFish:235926308071276555>")
                     try:
-                        self.biodata[message.author.id] += "\n{}".format(message.clean_content[8:])
+                        self.biodata[message.author.id] += "\n{}".format(bio_appendage)
                     except KeyError:
-                        self.biodata[message.author.id] = "{}".format(message.clean_content[8:])
+                        self.biodata[message.author.id] = "{}".format(bio_appendage)
                     write_json('bio.json', self.biodata)
-                    await self.send_message(message.channel, "`{0}` was appended to {1.name}'s bio.".format(message.clean_content[8:], message.author))
+                    await self.send_message(message.channel, "`{0}` was appended to {1.name}'s bio.".format(bio_appendage, message.author))
         else:
             bioname = user.id
-            print(bioname)
             if bioname in self.biodata:
                 if len(self.biodata[bioname]) < 1750:
                     print("hey, what the fuck")
@@ -803,9 +847,8 @@ class CarlBot(discord.Client):
                             await self.send_message(message.channel, x)
                             asyncio.sleep(0.3)
             else:
-                print(bioname)
                 await self.send_message(message.channel, "User has not set a bio\nTo set a bio use `!bio +`, no mention required")
-    async def asdban(self, author, message, channel):
+    async def cmd_asdban(self, author, message, channel):
         if author.id in self.whitelist:
             bannedusers = []
             for mention in message.mentions:
@@ -817,7 +860,7 @@ class CarlBot(discord.Client):
                     return
             if len(bannedusers) > 0:
                 await self.send_message(channel, "{} Just banned {}.".format(author.display_name, ', '.join(bannedusers)))
-    async def mute(self, message, author, channel, mentions):
+    async def cmd_mute(self, message, author, channel, mentions):
         if author.id not in self.whitelist:
             return
         muterole = discord.utils.get(message.server.roles, name='Stop being a faggot')
@@ -828,7 +871,7 @@ class CarlBot(discord.Client):
             await self.add_roles(user, muterole)
             mutestring.append(user.display_name)
         await self.send_message(channel, "**{}** just muted **{}**".format(message.author.display_name, ', '.join(mutestring)))
-    async def unmute(self, message, author, channel, mentions):
+    async def cmd_unmute(self, message, author, channel, mentions):
         if author.id not in self.whitelist:
             return
         muterole = discord.utils.get(message.server.roles, name='Stop being a faggot')
@@ -839,13 +882,13 @@ class CarlBot(discord.Client):
             await self.remove_roles(user, muterole)
             mutestring.append(user.display_name)
         await self.send_message(channel, "**{}** just unmuted **{}**".format(author.display_name, ', '.join(mutestring)))
-    async def poll(self, message, server, channel):
+    async def cmd_poll(self, message, server, channel):
         msg = await self.send_message(channel, message.clean_content[5:])
         yes_thumb = discord.utils.get(server.emojis, id="287711899943043072")
         no_thumb = discord.utils.get(server.emojis, id="291798048009486336")
         await self.add_reaction(msg, yes_thumb)
         await self.add_reaction(msg, no_thumb)
-    async def roll(self, message, leftover_args):
+    async def cmd_roll(self, message, leftover_args):
         try:
             if len(leftover_args) == 0:
                 sides = 6
@@ -869,9 +912,8 @@ class CarlBot(discord.Client):
             await self.send_message(message.channel,
             "You rolled **{0}** **{1}-sided** dice, results:{2}\nMedian: **{3}**, mean: **{4:.2f}**".format(rolls, sides, results, median, mean))
         except:
-            print("heeiqjeoasukdjlnask")
             return
-    async def ignorechannel(self, message, author):
+    async def cmd_ignorechannel(self, message, author):
         if author.id not in self.whitelist:
             return
         if not message.channel_mentions:
@@ -882,7 +924,7 @@ class CarlBot(discord.Client):
             else:
                 self.ignore[channel_mention.id] = channel_mention.name
         write_json('ignore.json', self.ignore)
-    async def nicknames(self, message, author, channel, mentions):
+    async def cmd_nicknames(self, message, author, channel, mentions):
         nicks = ""
         if mentions:
             user = mentions[0]
@@ -892,7 +934,7 @@ class CarlBot(discord.Client):
             user = author
         nicks += ', '.join(self.userinfo[user.id]["names"])
         await self.send_message(message.channel, "**Nickname history for {}#{}:**\n{}".format(user.name, user.discriminator, nicks.replace("_", "\_")))
-    async def postcount(self, message, mentions, channel, author, leftover_args):
+    async def cmd_postcount(self, message, mentions, channel, author, leftover_args):
         user = author
         if len(leftover_args) == 0:
             await self.send_message(channel, "**{0}** has posted **{1}** messages.".format(user.display_name, self.postcountdata[user.id]))
@@ -919,7 +961,7 @@ class CarlBot(discord.Client):
                 await self.send_message(channel, embed=em)
         else:
             return
-    async def i(self, message, author, mentions):
+    async def cmd_i(self, message, author, mentions):
         if message.mentions:
             user = mentions[0]
         else:
@@ -984,8 +1026,9 @@ class CarlBot(discord.Client):
         em.add_field(name="Joined at", value="{} {}".format(joined_at.replace(" ", "\n"), days_since), inline=True)
         #em.set_thumbnail(url=avatar)
         await self.send_message(message.channel, embed=em)
-    async def timer(self, message, leftover_args):
-        print("len of args: {}\n".format(len(leftover_args)))
+    async def cmd_pickmygold(self, channel):
+        await self.send_message(channel, random.choice(OW_Heroes))
+    async def cmd_timer(self, message, leftover_args):
         try:
             if leftover_args[0].isdigit() and len(leftover_args) == 1:
                 print("isdigittriggered" + leftover_args[0])
@@ -996,14 +1039,10 @@ class CarlBot(discord.Client):
             #elif len(args) == 1:
             #    a, b, firstDuration, firstUnit, cuntflaps = re.split("((\d+) ?([(h|m)])) ?((\d+) ?(m))? .*?", message.content)
             else:
-                print("At least this triggerd")
                 a, b, firstDuration, firstUnit, cuntflaps, secondDuration, secondUnit, g = re.split("((\d+) ?([(h|m)])) ?((\d+) ?(m))?.*?", message.clean_content)
-                print("a = {}, b = {}, firstDuration = {}, firstUnit = {}, cuntflaps = {}, secondDuration = {}, secondUnit = {}, g = {}".format(a, b, firstDuration, firstUnit, cuntflaps, secondDuration, secondUnit, g))
                 extratime = 0
-                print("len of args was >=2")
                 duration = int(firstDuration)
                 if firstUnit in ['m', 'min', 'minute', 'minutes']:
-                    print("firstUnit in m min minutes")
                     duration = duration * 60
                     timeUnit = "minute"
                     timePrint = duration / 60
@@ -1012,12 +1051,10 @@ class CarlBot(discord.Client):
                     try:
                         if secondUnit in ['m', 'min', 'minute', 'minutes']:
                             printme = re.sub("((\d)+ ?(h|hour|hours|m|min|minute|minutes)) ?((\d)+ ?(m|min|minute|minutes))? .*?", "", message.content[7:])
-                            print(printme)
                             extratime = int(secondDuration)
                             timeUnit = "hour, {}-minute".format(extratime)
                             timePrint = duration / 3600
                         else:
-                            print("timeUnit = \"hour\"", secondDuration)
                             timeUnit = "hour"
                             timePrint = duration / 3600
                     except IndexError:
@@ -1040,7 +1077,6 @@ class CarlBot(discord.Client):
                 #    await self.send_message(message.channel, "{} beep-- bop (how do timers talk?)".format(message.author.mention))
                 elif len(leftover_args) >= 2 and firstUnit in ['m', 'min', 'minute', 'minutes','h', 'hour', 'hours']:
                     printme = re.sub("((\d)+ ?(h|hour|hours|m|min|minute|minutes)) ?((\d)+ ?(m|min|minute|minutes))? .*?", "", message.content[7:])
-                    print(printme)
                     try:
                         if secondUnit in ['m', 'min', 'minute', 'minutes'] and len(leftover_args) >= 4:
                             await self.send_message(message.channel, "{0:.0f}-{1} timer started.".format(timePrint, timeUnit))
@@ -1062,7 +1098,7 @@ class CarlBot(discord.Client):
                 return
         except ValueError or KeyError:
             return
-    async def affix(self, channel, author):
+    async def cmd_affix(self, channel, author):
         nerd_epoch = datetime(year=2017, month=1, day=18, hour=8, minute=0, second=0, microsecond=0)
         EU_time = datetime.now()
         NA_time = EU_time - timedelta(weeks=2, hours=-16)
@@ -1088,7 +1124,7 @@ class CarlBot(discord.Client):
         N = (N + 1) % 8
         em.add_field(name="In three weeks", value="**EU:**\n{}\n{}\n{}\n\n**NA:**\n{}\n{}\n{}".format(AFFIX1[E], AFFIX2[E], AFFIX3[E], AFFIX1[N], AFFIX2[N], AFFIX3[N]), inline=True)
         await self.send_message(channel, embed=em)
-    async def weather(self, channel, author, leftover_args):
+    async def cmd_weather(self, channel, author, leftover_args):
         user = author
         if len(leftover_args) == 0:
             try:
@@ -1129,7 +1165,7 @@ class CarlBot(discord.Client):
                 await self.send_message(channel, "**{}** was just banned from the server.".format(mentions[0].display_name))
         else:
             await self.send_message(channel, "Nope")
-    async def bread(self, author, channel, mentions):
+    async def cmd_bread(self, author, channel, mentions):
         user = mentions[0]
         em_before = discord.Embed(title="Bread", description="Sending bread...", colour=0x42f4dc)
         em_before.set_author(name=user.name, icon_url=user.avatar_url)
@@ -1141,7 +1177,6 @@ class CarlBot(discord.Client):
         try:
             fmt = "{0} just fed you :bread: bread :bread:, so far I've fed people {1} times.\n{2}"
             await self.send_message(user, fmt.format(author, self.breadcount["people fed"], "hello!"))
-            await asyncio.sleep(0.1)
             await self.edit_message(xd, embed=em_success)
             self.breadcount["people fed"] += 1
             write_json('bread.json', self.breadcount)
@@ -1153,7 +1188,7 @@ class CarlBot(discord.Client):
 
 
 
-    async def say(self, channel, message, leftover_args):
+    async def cmd_say(self, channel, message, leftover_args):
         if message.mentions:
             return
         await self.delete_message(message)
@@ -1168,6 +1203,12 @@ class CarlBot(discord.Client):
             return
         if "@here" in message.content:
             return
+        if message.channel.id == "217375065346408449":
+            if (message.content.startswith("http://") or message.content.startswith("https://") or message.attachments):
+                return
+            else:
+                await self.delete_message(message)
+                await self.send_message(message.author, "No text allowed in #meme-archive (links and file uploads only)")
         if random.randint(1, 10000) == 1:
             legendaryRole = discord.utils.get(message.server.roles, name='Legendary')
             await self.add_roles(message.author, legendaryRole)
@@ -1184,9 +1225,9 @@ class CarlBot(discord.Client):
             if message.author.id in self.blacklist:
                 return
             if command in loaded_commands:
-                handler = getattr(self, command, None)
+                handler = getattr(self, "cmd_{}".format(command), None)
             elif command in aliased_commands:
-                handler = getattr(self, aliased_commands[command], None)
+                handler = getattr(self, "cmd_{}".format(aliased_commands[command]), None)
             else:
                 tagname = re.sub("[^a-z0-9_-]", "", command)
                 if tagname in self.taglist:
@@ -1220,7 +1261,7 @@ class CarlBot(discord.Client):
                 try:
                     response = await handler(**handler_kwargs)
                 except Exception as e:
-                    print(e)
+                    print(f"exception in kwargs: {e}")
             except:
                 print("welp")
         elif "carl" in message.content.lower():
