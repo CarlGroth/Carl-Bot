@@ -3,6 +3,7 @@
 args with an asterisk(*) are optional
 / indicates that you can use either of these args (not for the same purpose, though)
 Don't actually type out <>
+
 |Command   |Aliases   |args   |example   |usage   |perms required   |
 |---|---|---|---|---|---|
 |!say   |   |<message>   |!say I'm sentient!   |Causes the bot to say what you put after !say   |none   |
