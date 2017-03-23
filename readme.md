@@ -10,7 +10,7 @@ Don't actually type out &lt;&gt;
 |---|---|---|---|---|---|
 |!say   |   |&lt;message&gt;   |!say I'm sentient!   |Causes the bot to say what you put after !say   |none   |
 |!bread   |   |&lt;@mention&gt;   |!bread @Carlg#3516   |Sends bread to the first mentioned user   |none   |
-|!weather   |temp/temperature   |&lt;location&gt; |!weather stockholm   |Returns weather information for the specified location. Use !weather home &lt;location&gt; to set a home.   |none   |
+|!weather   |temp   |&lt;location&gt; |!weather stockholm   |Returns weather information for the specified location. Use !weather home &lt;location&gt; to set a home.   |none   |
 |!roll   |dice   |&lt;sides&gt;\* &lt;rolls&gt;\*   |!roll 100   |Rolls a die, defaults to 6 sides and 1 rolls if nothing else is specified   |none   |
 |!affix   |m+/affixes   |none   |!affix   |Returns current and future m+ affixes, updates automatically   |none   |
 |!choose   |choice/pick   |comma separated   |!choose this option, this other option   |Randomly selects one of your arguments   |none   |
