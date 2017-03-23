@@ -5,10 +5,15 @@
 #### Info for nerds
 
 python 3.6
+
 discord.py
+
 asyncio
+
 markovify
+
 fuzzywuzzy
+
 aiohttp
 
 ## Commands
