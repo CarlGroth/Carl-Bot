@@ -1,6 +1,6 @@
 # Carl Bot
 ## Commands
-args with an asterisk(*) are optional
+args with an asterisk(\*) are optional
 
 / indicates that you can use either of these args (not for the same purpose, though)
 
