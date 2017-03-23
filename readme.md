@@ -61,8 +61,8 @@ If you have a tag that you wish to append something to, use `!tag += tagname tag
 #### Deleting tags
 Use `!tag - tagname`
 #### Searching for tags
-Using `!tag search &lt;query&gt;` allows you to search for tags closely resembling your query. (`!tag search face` will return all tags with the word face)
+Using `!tag search <query>` allows you to search for tags closely resembling your query. (`!tag search face` will return all tags with the word face)
 #### Tag list
 Use `!tag list` for a list of all tags
 #### Using tags
-Simply use `!&lt;tagname&gt;`
+Simply use `!<tagname>`
