@@ -1,10 +1,23 @@
 # Carl Bot
+
+### A pretty good bot for a pretty good server
+
+#### Info for nerds
+
+python 3.6
+discord.py
+asyncio
+markovify
+fuzzywuzzy
+aiohttp
+
 ## Commands
-args with an asterisk(\*) are optional
 
-/ indicates that you can use either of these args (not for the same purpose, though)
+* args with an asterisk(\*) are optional
 
-Don't actually type out &lt;&gt;
+* / indicates that you can use either of these args (not for the same purpose, though)
+
+* Don't actually type out &lt;&gt;
 
 |Command   |Aliases   |args   |example   |usage   |perms required   |
 |---|---|---|---|---|---|
