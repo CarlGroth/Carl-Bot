@@ -84,3 +84,35 @@ Using `!tag search <query>` allows you to search for tags closely resembling you
 Use `!tag list` for a list of all tags
 #### Using tags
 Simply use `!<tagname>`
+
+## Common mistakes
+
+Just end my suffering
+
+#### Using + to append a tag or bio
+
+By using `+=` instead of `+` you can append directly without any confirmation
+
+#### Being too specific with your search
+
+If you only have a rough idea of what you're looking for, keep your search short. It will improve your chance of success
+
+#### Checking weather and userinfo in #general
+
+Fuck off
+
+#### Using default speak multiple times
+
+`!speak` supports up to 20 repeats. Use `!speak 20` for this
+
+#### Mentioning yourself
+
+`!bio, !speak, !postcount, !nicknames` all default to the author if nothing else is specified, mentioning yourself has no impact.
+
+#### Using !8ball for a choice
+
+There's a command for that
+
+#### Using !cts with external emojis
+
+The bot only has default emojis + server-specific ones
