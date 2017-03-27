@@ -49,6 +49,7 @@ loaded_commands = [
     "timer",
     "i",
     "postcount",
+    "search",
     "nicknames",
     "ignorechannel",
     "roll",
@@ -83,6 +84,8 @@ loaded_commands = [
     "bl",
     "eightball"
 ]
+
+
 CARL_DISCORD_ID = '106429844627169280'
 
 
@@ -116,7 +119,7 @@ class CarlBot(discord.Client):
         self.home = load_json('weather.json')
         self.aiosession = aiohttp.ClientSession(loop=self.loop)
         self.ignore = load_json('ignore.json')
-        self.starttime = time.time() + 3600
+        self.starttime = time.time() + 7200
 
 
     def fix_postcount(self, author):
@@ -327,8 +330,7 @@ class CarlBot(discord.Client):
             em_after.set_author(name=user.name, icon_url=user.avatar_url)
             help_embed = await self.send_message(channel, embed=em_before)
             await asyncio.sleep(0.1)
-            await self.send_message(author, HELP_MESSAGE1)
-            await self.send_message(author, HELP_MESSAGE2)
+            await self.send_message(author, "Check out the commands on github: https://github.com/CarlGroth/Carl-Bot#carl-bot\nOr PM Carl if you have any unanswered questions")
             await self.edit_message(help_embed, embed=em_after)
         else:
             return
@@ -390,9 +392,9 @@ class CarlBot(discord.Client):
     async def cmd_pickmyclass(self, channel):
         await self.send_message(channel, random.choice(WOW_CLASSES))
     async def cmd_uptime(self, channel):
-        uptime = str(timedelta(seconds=((time.time() + 3600) - self.starttime)))
+        uptime = str(timedelta(seconds=((time.time() + 7200) - self.starttime)))
         uptime = re.sub("\.(.*)", "", uptime)
-        currtime = time.strftime("%H:%M:%S", time.gmtime(time.time() + 3600))
+        currtime = time.strftime("%H:%M:%S", time.gmtime(time.time() + 7200))
         started_time = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(self.starttime))
         em = discord.Embed(title="Local time", description=currtime, colour=0x14e818)
         em.set_author(name=self.user.name, icon_url=self.user.avatar_url)
@@ -704,6 +706,67 @@ class CarlBot(discord.Client):
     async def cmd_echo(self, leftover_args, message):
         destination = message.channel_mentions[0]
         await self.send_message(destination, ' '.join(leftover_args[1:]))
+    async def cmd_search(self, channel, author, leftover_args, message):
+        taglist = self.taglist
+        if len(leftover_args) < 1:
+            return
+        query = re.sub("[^a-z0-9_-]", "", leftover_args[0].lower())
+        tagreturn = ""
+        bad_coding_practice_variable = ""
+        i = 1
+        for tag in sorted(taglist, reverse=False):
+            if fuzz.partial_ratio(query, tag) > 80:
+                tagreturn += "{}. {}\n".format(i, tag)
+                bad_coding_practice_variable += "{}\n".format(tag)
+                i += 1
+            else:
+                continue
+        list_of_returns = tagreturn.splitlines()
+        tempmessage = ""
+        final_list = []
+        xd = 0
+        for line in list_of_returns:
+            if xd < 14:
+                tempmessage += "{}\n".format(line)
+                xd += 1
+            else:
+                tempmessage += "{}\n".format(line)
+                final_list.append(tempmessage)
+                tempmessage = ""
+                xd = 0
+        final_list.append(tempmessage)
+
+        if len(tagreturn) == 0:
+            await self.send_message(channel, "Sorry, couldn't find any matching tags.")
+        else:
+            em = discord.Embed(title="Search results:", description=final_list[0], colour=0xffffff)
+            em.set_author(name=author.name, icon_url=author.avatar_url, url=author.avatar_url)
+            em.set_footer(text="{} results. (page {}/{})".format(i-1, 1, math.ceil((i-1)/15)))
+            initial_message = await self.send_message(channel, embed=em)
+            def check(mesg):
+                if mesg.content.isdigit():
+                    return True
+                elif mesg.content.startswith("p"):
+                    return True
+
+            for p in range(5):
+                msg = await self.wait_for_message(author=author, timeout=15)
+                #if the message is a number, match it with the associated tag
+                if msg.content.isdigit():
+                    listoflines = bad_coding_practice_variable.split('\n')
+                    await self.send_message(message.channel, self.taglist[listoflines[int(msg.content)-1]])
+                    return
+                #this is for pages
+                elif msg.content.startswith("p"):
+                    try:
+                        page_number = int(msg.content[1:])
+                        em2 = discord.Embed(title="Search results:", description=final_list[page_number-1], colour=0xffffff)
+                        em2.set_author(name=author.name, icon_url=author.avatar_url, url=author.avatar_url)
+                        em2.set_footer(text="{} results. (page {}/{})".format(i-1, page_number, math.ceil((i-1)/15)))
+                        await self.edit_message(initial_message, embed=em2)
+                    except Exception as e:
+                        print(e)
+                        return
     async def cmd_speak(self, mentions, leftover_args, message, author, channel):
         repeats = 3
         if not mentions and len(leftover_args) == 0:
@@ -986,6 +1049,7 @@ class CarlBot(discord.Client):
         try:
             joined_at = user.joined_at
             days_since = "({} days ago)".format((datetime.today() - user.joined_at).days)
+            days_after_creation = (user.joined_at - message.server.created_at).days
         except:
             joined_at = "User somehow doesn't have a join date.'"
             days_since = ""
@@ -1023,7 +1087,7 @@ class CarlBot(discord.Client):
         em.add_field(name="Retard coins", value=retard, inline=True)
         em.add_field(name="Sicklad", value=sicklad, inline=True)
         em.add_field(name="Created at", value="{} {}".format(created.replace(" ", "\n"), days_since_creation), inline=True)
-        em.add_field(name="Joined at", value="{} {}".format(joined_at.replace(" ", "\n"), days_since), inline=True)
+        em.add_field(name="Joined at", value="{} {}\nThat's {} days after the server was created".format(joined_at.replace(" ", "\n"), days_since, days_after_creation), inline=True)
         #em.set_thumbnail(url=avatar)
         await self.send_message(message.channel, embed=em)
     async def cmd_pickmygold(self, channel):
