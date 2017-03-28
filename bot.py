@@ -82,6 +82,7 @@ loaded_commands = [
     "wl",
     "echo",
     "bl",
+    "serverinfo",
     "eightball"
 ]
 
@@ -149,11 +150,13 @@ class CarlBot(discord.Client):
     #         await self.send_message(message.channel, "Bio succesfully added")
 
 
-
+    async def serverfix(self, server):
+        if server.id not in self.userinfo:
+            self.userinfo[server.id] = {}
     async def userfix(self, member):
-        if member.id not in self.userinfo:
-            self.userinfo[member.id] = {"names": [member.name],
-                                        "roles": [x.name for x in member.roles if x.name != "@everyone"]}
+        if member.id not in self.userinfo[member.server.id]:
+            self.userinfo[member.server.id][member.id] = {"names": [member.display_name],
+                                            "roles": [x.id for x in member.roles if x.name != "@everyone"]}
         write_json('users.json', self.userinfo)
     async def on_member_ban(self, member):
         general_channel = discord.utils.get(member.server.channels, name="general")
@@ -166,17 +169,17 @@ class CarlBot(discord.Client):
         if before.display_name != after.display_name:
             await self.send_message(log_channel, ":spy: **{0}#{1}** changed their nickname:\n**Before:** {2}\n**+After:** {3}".format(before.name, before.discriminator, before.display_name, after.display_name))
             await self.userfix(before)
-            if after.display_name not in self.userinfo[before.id]["names"]:
-                self.userinfo[before.id]["names"].append(after.display_name)
+            if after.display_name not in self.userinfo[before.server.id][before.id]["names"]:
+                self.userinfo[before.server.id][before.id]["names"].append(after.display_name)
             else:
                 #duplicate nicknames are lame
-                old_index = self.userinfo[before.id]["names"].index(after.display_name)
-                self.userinfo[before.id]["names"].pop(old_index)
-                self.userinfo[before.id]["names"].append(after.display_name)
+                old_index = self.userinfo[before.server.id][before.id]["names"].index(after.display_name)
+                self.userinfo[before.server.id][before.id]["names"].pop(old_index)
+                self.userinfo[before.server.id][before.id]["names"].append(after.display_name)
             write_json('users.json', self.userinfo)
         elif before.roles != after.roles:
             await self.userfix(before)
-            self.userinfo[before.id]["roles"] = [x.name for x in after.roles if x.name != "@everyone"]
+            self.userinfo[before.server.id][before.id]["roles"] = [x.id for x in after.roles if x.name != "@everyone"]
             write_json('users.json', self.userinfo)
             if len(before.roles) < len(after.roles):
                 #role added
@@ -187,19 +190,20 @@ class CarlBot(discord.Client):
                 s = set(after.roles)
                 newrole = [x for x in before.roles if x not in s]
                 await self.send_message(log_channel, ":warning: **{}** had the role **{}** removed.".format(before.display_name, newrole[0].name))
-
+    async def on_server_join(self, server):
+        await self.serverfix(server)
     async def on_member_join(self, member):
         log_channel = discord.utils.get(member.server.channels, name='log')
         await self.send_message(log_channel, ":white_check_mark: **{0.name}#{0.discriminator}** *({0.id})* Joined the server at `{1}`<@{2}> <@{3}> :white_check_mark:".format(member, time.strftime("%Y-%m-%d %H:%M:%S (central carl time)."), CARL_DISCORD_ID, "158370770068701184"))
-        if member.id not in self.userinfo:
+        if member.id not in self.userinfo[member.server.id]:
             await self.userfix(member)
         else:
             allRoles = member.server.roles
-            checkthis = self.userinfo[member.id]["roles"]
-            rolestobeadded = [x for x in allRoles if x.name in checkthis]
+            checkthis = self.userinfo[member.server.id][member.id]["roles"]
+            rolestobeadded = [x for x in allRoles if x.id in checkthis]
             await self.add_roles(member, *rolestobeadded)
             await asyncio.sleep(1)
-            await self.change_nickname(member, self.userinfo[member.id]["names"][-1])
+            await self.change_nickname(member, self.userinfo[member.server.id][member.id]["names"][-1])
 
     async def on_member_remove(self, member):
         log_channel = discord.utils.get(member.server.channels, name='log')
@@ -254,11 +258,13 @@ class CarlBot(discord.Client):
             print(server.name)
         member_list = self.get_all_members()
         for member in member_list:
-            if member.id not in self.userinfo:
-                self.userinfo[member.id] = {"names": [member.name],
-                                            "roles": [x.name for x in member.roles if x.name != "@everyone"]}
-            elif member.name not in self.userinfo[member.id]["names"]:
-                self.userinfo[member.id]["names"].append(member.name)
+            if member.server.id not in self.userinfo:
+                self.userinfo[member.server.id] = {}
+            if member.id not in self.userinfo[member.server.id]:
+                self.userinfo[member.server.id][member.id] = {"names": [member.display_name],
+                                            "roles": [x.id for x in member.roles if x.name != "@everyone"]}
+            elif member.display_name not in self.userinfo[member.server.id][member.id]["names"]:
+                self.userinfo[member.server.id][member.id]["names"].append(member.display_name)
         write_json('users.json', self.userinfo)
 
     async def cmd_ping(self, channel, message):
@@ -995,7 +1001,7 @@ class CarlBot(discord.Client):
                 nicks += "**No mention required for yourself!**\n"
         else:
             user = author
-        nicks += ', '.join(self.userinfo[user.id]["names"])
+        nicks += ', '.join(self.userinfo[user.server.id][user.id]["names"])
         await self.send_message(message.channel, "**Nickname history for {}#{}:**\n{}".format(user.name, user.discriminator, nicks.replace("_", "\_")))
     async def cmd_postcount(self, message, mentions, channel, author, leftover_args):
         user = author
@@ -1024,6 +1030,20 @@ class CarlBot(discord.Client):
                 await self.send_message(channel, embed=em)
         else:
             return
+    async def cmd_serverinfo(self, server, channel, author):
+        days_since_creation = "({} days ago)".format((datetime.today() - server.created_at).days)
+        usercolor = author.color
+        created = re.sub("\.(.*)", "", str(server.created_at))
+        em = discord.Embed(title=server.name, description=None, colour=usercolor)
+        em.set_author(name="Serverinfo", icon_url=server.icon_url, url=server.icon_url)
+        em.add_field(name="Server owner", value=f"{server.owner.name}#{server.owner.discriminator}", inline=True)
+        em.add_field(name="Member count", value=server.member_count, inline=True)
+        em.add_field(name="Created at", value=f"{created}\n{days_since_creation}", inline=True)
+        em.add_field(name="Region", value=f"{server.region}".capitalize(), inline=True)
+        em.add_field(name="Tags", value=len(self.taglist), inline=True)
+        em.add_field(name="Mods", value='\n'.join([self.whitelist[x] for x in self.whitelist]), inline=True)
+        await self.send_message(channel, embed=em)
+
     async def cmd_i(self, message, author, mentions):
         if message.mentions:
             user = mentions[0]
@@ -1063,9 +1083,9 @@ class CarlBot(discord.Client):
         except KeyError:
             bio = "User has not set a bio."
         try:
-            if len(self.userinfo[user.id]["names"]) > 1:
+            if len(self.userinfo[user.server.id][user.id]["names"]) > 1:
                 hmm = "Nicknames"
-                nicks = '\n'.join(self.userinfo[user.id]["names"][-5:])
+                nicks = '\n'.join(self.userinfo[user.server.id][user.id]["names"][-5:])
             else:
                 hmm = "Nickname"
                 nicks = user.display_name
