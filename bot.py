@@ -21,6 +21,7 @@ from responses import *
 from sensitivedata import *
 from datetime import datetime, timedelta
 
+
 client = discord.Client()
 
 
@@ -67,6 +68,7 @@ loaded_commands = [
     "avatar",
     "retard",
     "sicklad",
+    "rtb",
     "cts",
     "ae",
     "sc",
@@ -75,6 +77,7 @@ loaded_commands = [
     "pickmyclass",
     "pickmygold",
     "g",
+    "antiraid",
     "d",
     "help",
     "date",
@@ -121,6 +124,7 @@ class CarlBot(discord.Client):
         self.aiosession = aiohttp.ClientSession(loop=self.loop)
         self.ignore = load_json('ignore.json')
         self.starttime = time.time() + 7200
+        self.antiraid = []
 
 
     def fix_postcount(self, author):
@@ -153,6 +157,7 @@ class CarlBot(discord.Client):
     async def serverfix(self, server):
         if server.id not in self.userinfo:
             self.userinfo[server.id] = {}
+        write_json('users.json', self.userinfo)
     async def userfix(self, member):
         if member.id not in self.userinfo[member.server.id]:
             self.userinfo[member.server.id][member.id] = {"names": [member.display_name],
@@ -300,6 +305,18 @@ class CarlBot(discord.Client):
             write_json('blacklist.json', self.blacklist)
         await self.send_message(discord.Object(id='249336368067510272'), fmt.format(BLACKED))
 
+    async def cmd_rtb(self, server, channel, message, author):
+        if server.id == "213720502219440128":
+            destination = channel
+        elif channel.name != "bot-abuse":
+            destination = discord.Object("240315894385868801")
+            await self.delete_message(message)
+            xd = await self.send_message(destination, f"{author.mention}")
+            await self.delete_message(xd)
+        else:
+            destination = channel
+        await self.send_message(destination, roll_the_bones())
+        
     async def cmd_wl(self, mentions, author, leftover_args):
         if author.id != CARL_DISCORD_ID:
             return
@@ -324,7 +341,32 @@ class CarlBot(discord.Client):
         else:
             return
         await self.send_message(discord.Object(id='249336368067510272'), fmt.format(whitelisted))
-
+    async def func_antiraid(self, message):
+        raid_difference = datetime.now() - message.author.joined_at
+        print(raid_difference.total_seconds())
+        if raid_difference.total_seconds() < 10800:
+            print("true")
+            await self.delete_message(message)
+    async def cmd_antiraid(self, message, author, channel, server):
+        if author.id not in self.whitelist:
+            return
+        if server.id not in self.antiraid:
+            self.antiraid.append(server.id)
+            await self.send_message(channel, f"Antiraid mode enabled. Please wait while #{channel.name} is being purged")
+            counter = 0
+            async for raidmsg in self.logs_from(channel, limit=500):
+                raid_difference = datetime.now() - raidmsg.author.joined_at
+                print(f"hello, {raid_difference.total_seconds()}")
+                if raid_difference.total_seconds() < 10800:
+                    try:
+                        await self.delete_message(raidmsg)
+                        counter += 1
+                    except:
+                        continue
+            if counter != 0:
+                await self.send_message(channel, f"{counter} messages deleted.")
+        else:
+            del self.antiraid[server.id]
     async def cmd_date(self, channel):
         await self.send_message(channel, "It's {0}".format(time.strftime("%Y-%m-%d\n%H:%M:%S (central carl time).")))
     async def cmd_help(self, author, channel, leftover_args):
@@ -619,11 +661,12 @@ class CarlBot(discord.Client):
                         return True
 
                 for p in range(5):
-                    msg = await self.wait_for_message(author=author, timeout=15)
+                    msg = await self.wait_for_message(author=author, timeout=35)
                     #if the message is a number, match it with the associated tag
                     if msg.content.isdigit():
                         listoflines = bad_coding_practice_variable.split('\n')
                         await self.send_message(message.channel, self.taglist[listoflines[int(msg.content)-1]])
+                        await self.delete_message(initial_message)
                         return
                     #this is for pages
                     elif msg.content.startswith("p"):
@@ -636,6 +679,8 @@ class CarlBot(discord.Client):
                         except Exception as e:
                             print(e)
                             return
+                    else:
+                        return
         elif leftover_args[0] == "+=":
             tagname = re.sub("[^a-z0-9_-]", "", leftover_args[1].lower())
             content = message.content[(9+len(leftover_args[1])):]
@@ -754,6 +799,8 @@ class CarlBot(discord.Client):
                     return True
                 elif mesg.content.startswith("p"):
                     return True
+                else:
+                    return False
 
             for p in range(5):
                 msg = await self.wait_for_message(author=author, timeout=15)
@@ -761,6 +808,7 @@ class CarlBot(discord.Client):
                 if msg.content.isdigit():
                     listoflines = bad_coding_practice_variable.split('\n')
                     await self.send_message(message.channel, self.taglist[listoflines[int(msg.content)-1]])
+                    await self.delete_message(initial_message)
                     return
                 #this is for pages
                 elif msg.content.startswith("p"):
@@ -773,7 +821,18 @@ class CarlBot(discord.Client):
                     except Exception as e:
                         print(e)
                         return
-    async def cmd_speak(self, mentions, leftover_args, message, author, channel):
+                else:
+                    return
+    async def cmd_speak(self, mentions, server, leftover_args, message, author, channel):
+        if server.id == "213720502219440128":
+            destination = channel
+        elif channel.name != "bot-abuse":
+            destination = discord.Object("240315894385868801")
+            await self.delete_message(message)
+            xd = await self.send_message(destination, f"{author.mention}")
+            await self.delete_message(xd)
+        else:
+            destination = channel
         repeats = 3
         if not mentions and len(leftover_args) == 0:
             victim = author.id
@@ -817,7 +876,7 @@ class CarlBot(discord.Client):
                 return
             except AttributeError:
                 pass
-        await self.send_message(channel, speech)
+        await self.send_message(destination, speech)
     async def cmd_spook(self, mentions, channel):
         if mentions:
             await self.send_message(channel, "you have been spooked, **{}** ! o no :skull_crossbones:".format(mentions[0].display_name))
@@ -1034,6 +1093,7 @@ class CarlBot(discord.Client):
         days_since_creation = "({} days ago)".format((datetime.today() - server.created_at).days)
         usercolor = author.color
         created = re.sub("\.(.*)", "", str(server.created_at))
+        mods = sorted(list(self.whitelist.values()))
         em = discord.Embed(title=server.name, description=None, colour=usercolor)
         em.set_author(name="Serverinfo", icon_url=server.icon_url, url=server.icon_url)
         em.add_field(name="Server owner", value=f"{server.owner.name}#{server.owner.discriminator}", inline=True)
@@ -1041,7 +1101,7 @@ class CarlBot(discord.Client):
         em.add_field(name="Created at", value=f"{created}\n{days_since_creation}", inline=True)
         em.add_field(name="Region", value=f"{server.region}".capitalize(), inline=True)
         em.add_field(name="Tags", value=len(self.taglist), inline=True)
-        em.add_field(name="Mods", value='\n'.join([self.whitelist[x] for x in self.whitelist]), inline=True)
+        em.add_field(name="Mods", value='\n'.join(mods), inline=True)
         await self.send_message(channel, embed=em)
 
     async def cmd_i(self, message, author, mentions):
@@ -1185,7 +1245,7 @@ class CarlBot(discord.Client):
     async def cmd_affix(self, channel, author):
         nerd_epoch = datetime(year=2017, month=1, day=18, hour=8, minute=0, second=0, microsecond=0)
         EU_time = datetime.now()
-        NA_time = EU_time - timedelta(weeks=2, hours=-16)
+        NA_time = EU_time - timedelta(hours=-16)
         EU_indexthis = EU_time - nerd_epoch
         NA_indexthis = NA_time - nerd_epoch
         E = EU_indexthis.days // 7
@@ -1283,9 +1343,10 @@ class CarlBot(discord.Client):
             return
         if message.channel.is_private:
             return
-        if "@everyone" in message.content:
-            return
-        if "@here" in message.content:
+        if message.server.id in self.antiraid:
+            print("I happened!")
+            await self.func_antiraid(message)
+        if message.author.id in self.blacklist:
             return
         if message.channel.id == "217375065346408449":
             if (message.content.startswith("http://") or message.content.startswith("https://") or message.attachments):
@@ -1293,6 +1354,12 @@ class CarlBot(discord.Client):
             else:
                 await self.delete_message(message)
                 await self.send_message(message.author, "No text allowed in #meme-archive (links and file uploads only)")
+        if message.channel.id in self.ignore and message.author.id not in self.whitelist:
+            return
+        if "@everyone" in message.content:
+            return
+        if "@here" in message.content:
+            return
         if random.randint(1, 10000) == 1:
             legendaryRole = discord.utils.get(message.server.roles, name='Legendary')
             await self.add_roles(message.author, legendaryRole)
@@ -1351,7 +1418,7 @@ class CarlBot(discord.Client):
         elif "carl" in message.content.lower():
             insensitive_carl = re.compile(re.escape('carl'), re.IGNORECASE)
             xd = await self.send_message(discord.Object(id="213720502219440128"), "<@106429844627169280>, you were mentioned!")
-            await self.delete_message(xd)
+            #await self.delete_message(xd)
             postme = insensitive_carl.sub('**__Carl__**', message.clean_content)
             await self.send_message(discord.Object(id="213720502219440128"), "**{}** in **<#{}>**:\n{}".format(message.author.display_name, message.channel.id, postme))
         else:

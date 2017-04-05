@@ -67,6 +67,7 @@ aiohttp
 |!bl   |   |&lt;@mentions&gt;   |!bl @Antibehroz#1567   |Adds the mentioned users to the blacklist. The bot ignores all commands from blacklisted users   |Carl   |
 |!poll   |   |&lt;text&gt;\*   |!poll Is this a worthles feature?   |Makes a poll with reactions so that you can be biased   |none   |
 |!serverinfo   |   |none   |!serverinfo   |Returns some information about the server   |none   |
+|!search   |   |none   |!search face   |Returns tags that roughly match your search term   |none   |
 
 ## Tags
 The tag command can be used for a number of things. Creating tags, adding to tags, removing tags, searching for tags, returning a list of all tags.
