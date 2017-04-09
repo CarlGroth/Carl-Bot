@@ -343,9 +343,7 @@ class CarlBot(discord.Client):
         await self.send_message(discord.Object(id='249336368067510272'), fmt.format(whitelisted))
     async def func_antiraid(self, message):
         raid_difference = datetime.now() - message.author.joined_at
-        print(raid_difference.total_seconds())
         if raid_difference.total_seconds() < 10800:
-            print("true")
             await self.delete_message(message)
     async def cmd_antiraid(self, message, author, channel, server):
         if author.id not in self.whitelist:
@@ -356,7 +354,6 @@ class CarlBot(discord.Client):
             counter = 0
             async for raidmsg in self.logs_from(channel, limit=500):
                 raid_difference = datetime.now() - raidmsg.author.joined_at
-                print(f"hello, {raid_difference.total_seconds()}")
                 if raid_difference.total_seconds() < 10800:
                     try:
                         await self.delete_message(raidmsg)
@@ -365,8 +362,11 @@ class CarlBot(discord.Client):
                         continue
             if counter != 0:
                 await self.send_message(channel, f"{counter} messages deleted.")
+            else:
+                await self.send_message(channel, "No messages deleted, are you sure you're being raided?")
         else:
-            del self.antiraid[server.id]
+            self.antiraid.remove(server.id)
+            await self.send_message(channel, "This server is no longer in antiraid mode")
     async def cmd_date(self, channel):
         await self.send_message(channel, "It's {0}".format(time.strftime("%Y-%m-%d\n%H:%M:%S (central carl time).")))
     async def cmd_help(self, author, channel, leftover_args):
@@ -955,7 +955,6 @@ class CarlBot(discord.Client):
             bioname = user.id
             if bioname in self.biodata:
                 if len(self.biodata[bioname]) < 1750:
-                    print("hey, what the fuck")
                     await self.send_message(message.channel, "Bio for {0}:\n{1}".format(user.display_name, self.biodata[bioname]))
                 else:
                     #Blame kinny T for this abomination
@@ -1175,7 +1174,6 @@ class CarlBot(discord.Client):
     async def cmd_timer(self, message, leftover_args):
         try:
             if leftover_args[0].isdigit() and len(leftover_args) == 1:
-                print("isdigittriggered" + leftover_args[0])
                 duration = int(leftover_args[0])
                 timeUnit = "second"
                 timePrint = duration
@@ -1210,7 +1208,6 @@ class CarlBot(discord.Client):
                 #if len(leftover_args) >= 3:
             #7 days
             if duration < 604800:
-                print("len of args: {}\n".format(len(leftover_args)))
                 if len(leftover_args) == 1:
                     await self.send_message(message.channel, "{0:.0f}-{1} timer started.".format(timePrint, timeUnit))
                     await asyncio.sleep(duration)
@@ -1320,7 +1317,7 @@ class CarlBot(discord.Client):
         xd = await self.send_message(channel, embed=em_before)
         try:
             fmt = "{0} just fed you :bread: bread :bread:, so far I've fed people {1} times.\n{2}"
-            await self.send_message(user, fmt.format(author, self.breadcount["people fed"], "hello!"))
+            await self.send_message(user, fmt.format(author, self.breadcount["people fed"], "https://i.imgur.com/18cOdIx.png"))
             await self.edit_message(xd, embed=em_success)
             self.breadcount["people fed"] += 1
             write_json('bread.json', self.breadcount)
@@ -1344,10 +1341,7 @@ class CarlBot(discord.Client):
         if message.channel.is_private:
             return
         if message.server.id in self.antiraid:
-            print("I happened!")
             await self.func_antiraid(message)
-        if message.author.id in self.blacklist:
-            return
         if message.channel.id == "217375065346408449":
             if (message.content.startswith("http://") or message.content.startswith("https://") or message.attachments):
                 return

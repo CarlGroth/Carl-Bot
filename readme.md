@@ -68,6 +68,8 @@ aiohttp
 |!poll   |   |&lt;text&gt;\*   |!poll Is this a worthles feature?   |Makes a poll with reactions so that you can be biased   |none   |
 |!serverinfo   |   |none   |!serverinfo   |Returns some information about the server   |none   |
 |!search   |   |none   |!search face   |Returns tags that roughly match your search term   |none   |
+|!antiraid   |   |none   |!antiraid   |Purges the channel and deletes any messages posted from accounts that joined less than an hour ago   |WL   |
+|!rtb   |   |none   |!rtb   |Rolls the bones!   |none   |
 
 ## Tags
 The tag command can be used for a number of things. Creating tags, adding to tags, removing tags, searching for tags, returning a list of all tags.
