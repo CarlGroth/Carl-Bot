@@ -14,12 +14,19 @@ import time
 import statistics
 import random
 import markovify
+import PIL
+import logging
+import numpy as np
 
+from wordcloud import WordCloud, ImageColorGenerator
 from googleapiclient.discovery import build
 from fuzzywuzzy import fuzz
 from responses import *
 from sensitivedata import *
 from datetime import datetime, timedelta
+from io import BytesIO
+from PIL import Image
+
 
 
 client = discord.Client()
@@ -69,6 +76,7 @@ loaded_commands = [
     "retard",
     "sicklad",
     "rtb",
+    "purge",
     "cts",
     "ae",
     "sc",
@@ -79,9 +87,14 @@ loaded_commands = [
     "g",
     "antiraid",
     "d",
+    "memri",
     "help",
+    "ls",
+    "wcm",
     "date",
+    "sparty",
     "sc",
+    "wordcloud",
     "wl",
     "echo",
     "bl",
@@ -140,19 +153,6 @@ class CarlBot(discord.Client):
     def log(self, message):
         with open("logs/{}.txt".format(message.author.id), "a", encoding="utf-8") as f:
             f.write("{}\n".format(message.clean_content))
-    # maybe one day
-    # async def add_bio(message):
-    #     bio_add = ""
-    #     if message.attachments:
-    #         bio_add += f"{message.attachments[0]['url']} "
-    #     bio_add += message.content[7:]
-    #     self.biodata[message.author.id] = bio_add
-    #     write_json('bio.json', self.biodata)
-    #     if message.author.id in self.biodata:
-    #         await self.send_message(message.channel, "Bio succesfully replaced")
-    #     else:
-    #         await self.send_message(message.channel, "Bio succesfully added")
-
 
     async def serverfix(self, server):
         if server.id not in self.userinfo:
@@ -161,7 +161,7 @@ class CarlBot(discord.Client):
     async def userfix(self, member):
         if member.id not in self.userinfo[member.server.id]:
             self.userinfo[member.server.id][member.id] = {"names": [member.display_name],
-                                            "roles": [x.id for x in member.roles if x.name != "@everyone"]}
+                                                          "roles": [x.id for x in member.roles if (x.name != "@everyone" and x.id != "232206741339766784")]}
         write_json('users.json', self.userinfo)
     async def on_member_ban(self, member):
         general_channel = discord.utils.get(member.server.channels, name="general")
@@ -172,7 +172,10 @@ class CarlBot(discord.Client):
     async def on_member_update(self, before, after,):
         log_channel = discord.utils.get(before.server.channels, name='log')
         if before.display_name != after.display_name:
-            await self.send_message(log_channel, ":spy: **{0}#{1}** changed their nickname:\n**Before:** {2}\n**+After:** {3}".format(before.name, before.discriminator, before.display_name, after.display_name))
+            fmt = ":spy: **{0}#{1}** changed their nickname:\n**Before:** {2}\n**+After:** {3}"
+            fmt = fmt.format(before.name, before.discriminator, before.display_name, after.display_name)
+            fmt = clean_string(fmt)
+            await self.send_message(log_channel, fmt)
             await self.userfix(before)
             if after.display_name not in self.userinfo[before.server.id][before.id]["names"]:
                 self.userinfo[before.server.id][before.id]["names"].append(after.display_name)
@@ -184,17 +187,19 @@ class CarlBot(discord.Client):
             write_json('users.json', self.userinfo)
         elif before.roles != after.roles:
             await self.userfix(before)
-            self.userinfo[before.server.id][before.id]["roles"] = [x.id for x in after.roles if x.name != "@everyone"]
+            self.userinfo[before.server.id][before.id]["roles"] = [x.id for x in after.roles if (x.name != "@everyone" and x.id != "232206741339766784")]
             write_json('users.json', self.userinfo)
             if len(before.roles) < len(after.roles):
                 #role added
                 s = set(before.roles)
                 newrole = [x for x in after.roles if x not in s]
-                await self.send_message(log_channel, ":warning: **{}** had the role **{}** added.".format(before.display_name, newrole[0].name))
+                fmt = ":warning: **{}** had the role **{}** added.".format(before.display_name, newrole[0].name)
+                await self.send_message(log_channel, clean_string(fmt))
             else:
                 s = set(after.roles)
                 newrole = [x for x in before.roles if x not in s]
-                await self.send_message(log_channel, ":warning: **{}** had the role **{}** removed.".format(before.display_name, newrole[0].name))
+                fmt = ":warning: **{}** had the role **{}** removed.".format(before.display_name, newrole[0].name)
+                await self.send_message(log_channel, clean_string(fmt))
     async def on_server_join(self, server):
         await self.serverfix(server)
     async def on_member_join(self, member):
@@ -229,7 +234,7 @@ class CarlBot(discord.Client):
             if message.content.startswith("++"):
                 return
         destination = discord.utils.get(message.server.channels, name='log')
-        poststring = ":x: `{1}` **{0}** Deleted their message:  ```{2}``` in `{3}`".format(message.author.display_name, time.strftime("%H:%M:%S"), message.clean_content, message.channel)
+        poststring = ":x: `{1}` **{0}** Deleted their message:  ```{2}``` in `{3}`".format(clean_string(message.author.display_name), time.strftime("%H:%M:%S"), message.clean_content, message.channel)
         if message.attachments:
             poststring += "\n{}".format(message.attachments[0]['url'])
 
@@ -267,7 +272,7 @@ class CarlBot(discord.Client):
                 self.userinfo[member.server.id] = {}
             if member.id not in self.userinfo[member.server.id]:
                 self.userinfo[member.server.id][member.id] = {"names": [member.display_name],
-                                            "roles": [x.id for x in member.roles if x.name != "@everyone"]}
+                                            "roles": [x.id for x in member.roles if (x.name != "@everyone" and x.id != "232206741339766784")]}
             elif member.display_name not in self.userinfo[member.server.id][member.id]["names"]:
                 self.userinfo[member.server.id][member.id]["names"].append(member.display_name)
         write_json('users.json', self.userinfo)
@@ -281,7 +286,8 @@ class CarlBot(discord.Client):
         await self.edit_message(msg, "pong! {}ms".format(int(d_time)))
     async def cmd_eightball(self, channel, author):
         response = random.choice(responses)
-        await self.send_message(channel, f":8ball: | {response}, **{author.display_name}**")
+        name = clean_string(author.display_name)
+        await self.send_message(channel, f":8ball: | {response}, **{name}**")
     async def cmd_bl(self, mentions, author, leftover_args):
         if author.id != CARL_DISCORD_ID:
             return
@@ -303,8 +309,75 @@ class CarlBot(discord.Client):
                     BLACKED.append(usr.display_name)
             BLACKED = ', '.join(BLACKED)
             write_json('blacklist.json', self.blacklist)
-        await self.send_message(discord.Object(id='249336368067510272'), fmt.format(BLACKED))
+        await self.send_message(discord.Object(id='249336368067510272'), fmt.format(clean_string(BLACKED)))
+    async def cmd_wcm(self, author, mentions, message, leftover_args, channel):
+        if mentions:
+            victim = mentions[0]
+        else:
+            victim = author
+        if message.attachments:
+            avatar = message.attachments[0]['url']
+        else:
+            avatar = victim.avatar_url.replace(".webp", ".png")
+            avatar = avatar.replace(".gif", ".png")
+        try:
+            with aiohttp.Timeout(10):
+                async with self.aiosession.get(avatar) as res:
+                    avatar_mask = await res.read()
+                    # avatar_mask = BytesIO(avatar_mask)
 
+        except Exception as e:
+            print(e)
+
+        with open(f"logs/{victim.id}.txt", encoding="utf8") as f:
+            lines = f.readlines()
+        avatar_mask = BytesIO(avatar_mask)
+        avatar_mask = Image.open(avatar_mask)
+        avatar_mask = avatar_mask.resize((1024, 1024), Image.ANTIALIAS)
+        xd = BytesIO()
+        avatar_mask.save(xd, "png")
+        xd.seek(0)
+        avatar_array = np.array(avatar_mask)
+
+        text = "".join(lines)
+        image_colors = ImageColorGenerator(avatar_array)
+        wordcloud = WordCloud(width=1024, max_words=1500, height=1024, max_font_size=40, mask=avatar_array, color_func=image_colors, background_color='black').generate(text)
+        image = wordcloud.to_image()
+        buffer = BytesIO()
+        image.save(buffer, "png")
+        buffer.seek(0)
+        await self.send_file(channel, fp=buffer, filename="whatever.png")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    async def cmd_wordcloud(self, author, mentions, leftover_args, channel):
+        if mentions:
+            victim = mentions[0].id
+        elif len(leftover_args) > 0:
+            victim = leftover_args[0]
+        else:
+            victim = author.id
+        with open(f"logs/{victim}.txt", encoding="utf8") as f:
+            lines = f.readlines()
+        text = "".join(lines)
+        wordcloud = WordCloud(width=1600, max_words=500, height=1000, max_font_size=240).generate(text)
+        image = wordcloud.to_image()
+        buffer = BytesIO()
+        image.save(buffer, "png")
+        buffer.seek(0)
+        await self.send_file(channel, fp=buffer, filename="whatever.png")
     async def cmd_rtb(self, server, channel, message, author):
         if server.id == "213720502219440128":
             destination = channel
@@ -317,6 +390,8 @@ class CarlBot(discord.Client):
             destination = channel
         await self.send_message(destination, roll_the_bones())
         
+    async def cmd_memri(self, channel):
+        await self.send_message(channel, random.choice(no_flight_list))
     async def cmd_wl(self, mentions, author, leftover_args):
         if author.id != CARL_DISCORD_ID:
             return
@@ -340,7 +415,7 @@ class CarlBot(discord.Client):
             write_json('whitelist.json', self.whitelist)
         else:
             return
-        await self.send_message(discord.Object(id='249336368067510272'), fmt.format(whitelisted))
+        await self.send_message(discord.Object(id='249336368067510272'), fmt.format(clean_string(whitelisted)))
     async def func_antiraid(self, message):
         raid_difference = datetime.now() - message.author.joined_at
         if raid_difference.total_seconds() < 10800:
@@ -387,8 +462,8 @@ class CarlBot(discord.Client):
         definitions = {}
         try:
             url = 'https://od-api.oxforddictionaries.com/api/v1/entries/' + language + '/' + message.content[3:].lower()
-            r = requests.get(url, headers = {'app_id': app_id, 'app_key': app_key})
-            jsonthing = r.json()
+            async with aiohttp.get(url, headers = {'app_id': app_id, 'app_key': app_key}) as r:
+                jsonthing = await r.json()
             wordname = message.content[3:].capitalize()
             pronounciation = jsonthing["results"][0]["lexicalEntries"][0]["pronunciations"][0]["phoneticSpelling"]
             user = author
@@ -413,6 +488,7 @@ class CarlBot(discord.Client):
                 except IndexError:
                     pass
         except Exception as e:
+            print(e.__)
             await self.send_message(message.channel, "No definition found, blame Oxford Dictionaries")
             return
         for box in definitions:
@@ -532,6 +608,7 @@ class CarlBot(discord.Client):
                 else:
                     continue
             post_this += "**{0}** coins in total spread across **{1}** retards.".format(sum(self.retardcoins.values()),len(self.retardcoins))
+            post_this = clean_string(post_this)
             await self.send_message(channel, post_this)
         try:
             userID = mentions[0].id
@@ -569,12 +646,17 @@ class CarlBot(discord.Client):
     async def cmd_m(self, message, channel):
         if message.author.id == CARL_DISCORD_ID:
             await self.send_message(channel, "{}".format(eval(message.content[3:])))
-    async def cmd_choose(self, channel, leftover_args):
+    async def cmd_choose(self, channel, message, leftover_args):
         if len(leftover_args) == 0:
             return
-        choices = leftover_args
-        choices = ' '.join(choices)
-        choices = choices.split(",")
+        if "," in message.content:
+            choices = leftover_args
+            choices = ' '.join(choices)
+            choices = choices.split(",")
+        else:
+            choices = leftover_args
+            choices = ' '.join(choices)
+            choices = choices.split(" ")
         await self.send_message(channel, random.choice(choices))
 
     async def cmd_forceban(self, author, server, leftover_args):
@@ -833,7 +915,7 @@ class CarlBot(discord.Client):
             await self.delete_message(xd)
         else:
             destination = channel
-        repeats = 3
+        repeats = 5
         if not mentions and len(leftover_args) == 0:
             victim = author.id
         elif not mentions and len(leftover_args) == 1:
@@ -849,20 +931,29 @@ class CarlBot(discord.Client):
                     victim = author.id
             except:
                 return
-        elif mentions:
+        elif len(mentions) == 1:
             victim = mentions[0].id
+        elif len(mentions) == 2:
+            victim = mentions[0].id
+            second_victim = mentions[1].id
         else:
             return
         try:
             with open("logs/{}.txt".format(victim), encoding="utf-8") as f:
                 text = f.read()
             text_model = markovify.NewlineText(text)
+            if len(mentions) == 2:
+                with open("logs/{}.txt".format(second_victim), encoding="utf-8") as f:
+                    text2 = f.read()
+                text_model_b = markovify.NewlineText(text2)
+                text_model = markovify.combine([text_model, text_model_b], [ 1, 1 ])
+                print("two or something")
             speech = "**{}:**\n".format(author.name)
         except:
             await self.send_message(channel, f"No file matching {id_or_repeats}")
         for i in range(repeats):
             try:
-                variablename = text_model.make_short_sentence(140, state_size=3).replace("@", "@ ")
+                variablename = text_model.make_short_sentence(140, state_size=2).replace("@", "@ ")
                 #print(variablename)
                 try:
                     id_mention = re.search("<@ [!]?(.*)>", variablename)
@@ -877,9 +968,56 @@ class CarlBot(discord.Client):
             except AttributeError:
                 pass
         await self.send_message(destination, speech)
+    async def cmd_sparty(self, message, channel):
+        sparty_role = discord.utils.get(message.server.roles, name='Sparty Fan Club')
+        if sparty_role in message.author.roles:
+            await self.remove_roles(message.author, sparty_role)
+            await self.send_message(channel, "You will no longer receive a notification when sparty goes live.")
+        else:
+            await self.add_roles(message.author, sparty_role)
+            await self.send_message(channel, "You will now receive a notification when sparty goes live.")
+    async def cmd_ls(self, mentions, channel, author, server, message):
+        if server.id == "213720502219440128":
+            destination = channel
+        elif channel.name != "bot-abuse":
+            destination = discord.Object("240315894385868801")
+            await self.delete_message(message)
+            xd = await self.send_message(destination, f"{author.mention}")
+            await self.delete_message(xd)
+        else:
+            destination = channel
+        if mentions:
+            victim = mentions[0].id
+        else:
+            victim = author.id
+        repeats = 25
+        try:
+            with open("logs/{}.txt".format(victim), encoding="utf-8") as f:
+                text = f.read()
+            text_model = markovify.NewlineText(text)
+            speech = "**{}:**\n".format(author.name)
+        except:
+            await self.send_message(channel, f"No file matching {id_or_repeats}")
+        for i in range(repeats):
+            try:
+                variablename = text_model.make_sentence().replace("@", "@ ")
+                #print(variablename)
+                try:
+                    id_mention = re.search("<@ [!]?(.*)>", variablename)
+                    id_mention = id_mention.group(1)
+                    id_name = self.get_server("207943928018632705").get_member(str(id_mention)).name
+                    add_this = re.sub("<@ [!]?.*>", id_name, variablename)
+                    speech += "{}. ".format(add_this)
+                except AttributeError:
+                    speech += "{}. ".format(variablename)
+            except KeyError:
+                return
+            except AttributeError:
+                pass
+        await self.send_message(destination, speech)
     async def cmd_spook(self, mentions, channel):
         if mentions:
-            await self.send_message(channel, "you have been spooked, **{}** ! o no :skull_crossbones:".format(mentions[0].display_name))
+            await self.send_message(channel, "you have been spooked, **{}** ! o no :skull_crossbones:".format(clean_string(mentions[0].display_name)))
         else:
             await self.send_message(channel, "boo!")
     async def cmd_bio(self, message, leftover_args):
@@ -955,12 +1093,12 @@ class CarlBot(discord.Client):
             bioname = user.id
             if bioname in self.biodata:
                 if len(self.biodata[bioname]) < 1750:
-                    await self.send_message(message.channel, "Bio for {0}:\n{1}".format(user.display_name, self.biodata[bioname]))
+                    await self.send_message(message.channel, "Bio for {0}:\n{1}".format(clean_string(user.display_name), self.biodata[bioname]))
                 else:
                     #Blame kinny T for this abomination
                     listOfLines = self.biodata[bioname]
                     listOfLines = listOfLines.splitlines()
-                    tempmessage = "**Bio for {0}:**\n".format(user.display_name)
+                    tempmessage = "**Bio for {0}:**\n".format(clean_string(user.display_name))
                     finalmessage = []
                     for line in listOfLines:
                         if len(tempmessage) < 1800:
@@ -987,6 +1125,32 @@ class CarlBot(discord.Client):
                     return
             if len(bannedusers) > 0:
                 await self.send_message(channel, "{} Just banned {}.".format(author.display_name, ', '.join(bannedusers)))
+    async def cmd_purge(self, message, mentions, leftover_args, author, channel):
+        purge_limit = 500
+        if author.id not in self.whitelist:
+            return
+        if not message.mentions and author.id == CARL_DISCORD_ID:
+            victim = True
+            purge_limit = int(leftover_args[0])
+        elif message.mentions and len(leftover_args) == 2:
+            victim = message.mentions[0]
+            try:
+                purge_limit = int(leftover_args[1])
+            except:
+                return await self.send_message(channel, "Couldn't parse that, it's `!purge @mention <number of messages to check>`")
+        elif message.mentions and len(leftover_args) == 1:
+            victim = message.mentions[0]
+            purge_limit = 100
+        else:
+            return
+        if purge_limit > 500:
+            purge_limit = 500
+        counter = 0
+        async for purgemsg in self.logs_from(channel, limit=purge_limit):
+            if purgemsg.author == victim:
+                await self.delete_message(purgemsg)
+                counter += 1
+        await self.send_message(channel, f"Purged {counter} messages.")
     async def cmd_mute(self, message, author, channel, mentions):
         if author.id not in self.whitelist:
             return
@@ -996,8 +1160,8 @@ class CarlBot(discord.Client):
         mutestring = []
         for user in message.mentions:
             await self.add_roles(user, muterole)
-            mutestring.append(user.display_name)
-        await self.send_message(channel, "**{}** just muted **{}**".format(message.author.display_name, ', '.join(mutestring)))
+            mutestring.append(clean_string(user.display_name))
+        await self.send_message(channel, "**{}** just muted **{}**".format(clean_string(message.author.display_name), ', '.join(mutestring)))
     async def cmd_unmute(self, message, author, channel, mentions):
         if author.id not in self.whitelist:
             return
@@ -1008,7 +1172,8 @@ class CarlBot(discord.Client):
         for user in mentions:
             await self.remove_roles(user, muterole)
             mutestring.append(user.display_name)
-        await self.send_message(channel, "**{}** just unmuted **{}**".format(author.display_name, ', '.join(mutestring)))
+            fmt = "**{}** just unmuted **{}**".format(author.display_name, ', '.join(mutestring))
+        await self.send_message(channel, clean_string(fmt))
     async def cmd_poll(self, message, server, channel):
         msg = await self.send_message(channel, message.clean_content[5:])
         yes_thumb = discord.utils.get(server.emojis, id="287711899943043072")
@@ -1060,16 +1225,20 @@ class CarlBot(discord.Client):
         else:
             user = author
         nicks += ', '.join(self.userinfo[user.server.id][user.id]["names"])
-        await self.send_message(message.channel, "**Nickname history for {}#{}:**\n{}".format(user.name, user.discriminator, nicks.replace("_", "\_")))
+        nicks = re.sub('@', '@\u200b', nicks.replace("_", "\_"))
+        await self.send_message(message.channel, "**Nickname history for {}#{}:**\n{}".format(user.name, user.discriminator, nicks))
     async def cmd_postcount(self, message, mentions, channel, author, leftover_args):
         user = author
         if len(leftover_args) == 0:
-            await self.send_message(channel, "**{0}** has posted **{1}** messages.".format(user.display_name, self.postcountdata[user.id]))
+            fmt = "**{0}** has posted **{1}** messages."
+            fmt = fmt.format(user.display_name, self.postcountdata[user.id])
+            fmt = clean_string(fmt)
+            await self.send_message(channel, fmt)
         elif len(leftover_args) == 1:
             post_this = ""
             if mentions:
                 user = mentions[0]
-                await self.send_message(channel, "**{0}** has posted **{1}** messages.".format(user.display_name, self.postcountdata[user.id]))
+                await self.send_message(channel, "**{0}** has posted **{1}** messages.".format(clean_string(user.display_name), self.postcountdata[user.id]))
             elif leftover_args[0].lower() in ['leaderboard', 'leaderboards', 'top', 'highscore', 'highscores', 'hiscores']:
                 leaderboard = self.postcountdata
                 rank = 1
@@ -1158,7 +1327,7 @@ class CarlBot(discord.Client):
         created = re.sub("\.(.*)", "", str(user.created_at))
         joined_at = re.sub("\.(.*)", "", str(user.joined_at))
         em = discord.Embed(title="Userinfo", description=bio, colour=usercolor)
-        em.set_author(name=user.name, icon_url=user.avatar_url, url=user.avatar_url)
+        em.set_author(name=user.name, icon_url=user.avatar_url, url=user.avatar_url.replace(".webp", ".png"))
         em.add_field(name="Name", value="{}#{}".format(user.name, user.discriminator), inline=True)
         em.add_field(name=hmm, value=nicks, inline=True)
         em.add_field(name="ID", value=user.id, inline=True)
@@ -1265,13 +1434,22 @@ class CarlBot(discord.Client):
         N = (N + 1) % 8
         em.add_field(name="In three weeks", value="**EU:**\n{}\n{}\n{}\n\n**NA:**\n{}\n{}\n{}".format(AFFIX1[E], AFFIX2[E], AFFIX3[E], AFFIX1[N], AFFIX2[N], AFFIX3[N]), inline=True)
         await self.send_message(channel, embed=em)
-    async def cmd_weather(self, channel, author, leftover_args):
+    async def cmd_weather(self, channel, server, author, message, leftover_args):
+        if server.id == "213720502219440128":
+            destination = channel
+        elif channel.name != "bot-abuse":
+            destination = discord.Object("240315894385868801")
+            await self.delete_message(message)
+            xd = await self.send_message(destination, f"{author.mention}")
+            #await self.delete_message(xd)
+        else:
+            destination = channel
         user = author
         if len(leftover_args) == 0:
             try:
                 city = self.home[author.id]
             except:
-                return await self.send_message(channel, "No home set. To set a home, use `!weather home <location>`")
+                return await self.send_message(destination, "No home set. To set a home, use `!weather home <location>`")
         else:
             city = ' '.join(leftover_args)
             if leftover_args[0].lower() == "home" and len(leftover_args) > 1:
@@ -1281,10 +1459,10 @@ class CarlBot(discord.Client):
                 await self.send_message(channel, "Home set to **{}**".format(home))
                 return
             elif leftover_args[0].lower() == "home" and len(leftover_args) == 1:
-                await self.send_message(channel, "Your location has __not__ been changed, use `!weather home <location>` to set a home")
+                await self.send_message(destination, "Your location has __not__ been changed, use `!weather home <location>` to set a home")
                 return
-        r = requests.get('http://api.openweathermap.org/data/2.5/weather?q='+city+weatherkey)
-        json_object = r.json()
+        async with aiohttp.get('http://api.openweathermap.org/data/2.5/weather?q='+city+weatherkey) as r:
+            json_object = await r.json()
         temp_k = float(json_object['main']['temp'])
         temp_c = temp_k - 273.15
         temp_f = temp_c * (9/5) + 32
@@ -1297,13 +1475,13 @@ class CarlBot(discord.Client):
         em.add_field(name="Humidity", value="{}%".format(humidity), inline=True)
         em.add_field(name="Wind speed", value="{}m/s\n{}".format(windspeed, beaufort_scale(windspeed)), inline=True)
         em.set_thumbnail(url=user.avatar_url)
-        await self.send_message(channel, embed=em)
+        await self.send_message(destination, embed=em)
     async def cmd_ban(self, author, channel, mentions):
         if author.id == CARL_DISCORD_ID:
             if mentions[0] == self.user:
                 await self.send_message(channel, "I'm sorry, Carl. I'm afraid I can't do that.")
             else:
-                await self.send_message(channel, "**{}** was just banned from the server.".format(mentions[0].display_name))
+                await self.send_message(channel, "**{}** was just banned from the server.".format(clean_string(mentions[0].display_name)))
         else:
             await self.send_message(channel, "Nope")
     async def cmd_bread(self, author, channel, mentions):
@@ -1336,6 +1514,7 @@ class CarlBot(discord.Client):
         await self.send_message(channel, ' '.join(leftover_args))
 
     async def on_message(self, message):
+        self.fix_postcount(message.author)
         if message.author == self.user:
             return
         if message.channel.is_private:
@@ -1378,6 +1557,20 @@ class CarlBot(discord.Client):
                 if tagname in self.taglist:
                     return await self.send_message(message.channel, self.taglist[tagname])
                 else:
+                    # tagreturn = ""
+                    # tagdict = {}
+                    # for tag in sorted(self.taglist, reverse=False):
+                    #     if fuzz.partial_ratio(tagname, tag) > 80:
+                    #         ratio = fuzz.partial_ratio(tagname, tag)
+                    #         tagdict[tag] = ratio
+                    # print(tagdict)
+                    # suggestion_value = max(tagdict.iteritems(), key=operator.itemgetter(1))[0]
+                    # suggestion = max(tagdict.iteritems(), key=operator.itemgetter(0))[0]
+                    # if suggestion_value > 90:
+                    #     await self.send_message(message.channel, f"No tag with that name, did you mean {suggestion}? (y/n)")
+                    #     msg = await self.wait_for_message(author=message.author, timeout=35)
+                    #     if msg.content == "y":
+                    #         await self.send_message(message.channel, self.taglist[suggestion])
                     return
 
             handler_kwargs = {}
@@ -1411,15 +1604,22 @@ class CarlBot(discord.Client):
                 print("welp")
         elif "carl" in message.content.lower():
             insensitive_carl = re.compile(re.escape('carl'), re.IGNORECASE)
-            xd = await self.send_message(discord.Object(id="213720502219440128"), "<@106429844627169280>, you were mentioned!")
+            #xd = await self.send_message(discord.Object(id="213720502219440128"), "<@106429844627169280>, you were mentioned!")
             #await self.delete_message(xd)
             postme = insensitive_carl.sub('**__Carl__**', message.clean_content)
             await self.send_message(discord.Object(id="213720502219440128"), "**{}** in **<#{}>**:\n{}".format(message.author.display_name, message.channel.id, postme))
+        # elif re.search("https?:\/\/(?:en\.)?(?:www\.)?(m(?:obile)?\.).*(&desktop.*)?", message.clean_content):
+        #     url = re.sub("(m(?:obile)?\.)(&desktop.*)?", "", message.clean_content)
+        #     await self.send_message(message.channel, f"**Non mobile link:**\n<{url}>")
+        #     print(url)
         else:
-            self.fix_postcount(message.author)
             self.log(message)
 
-
 if __name__ == '__main__':
+    logger = logging.getLogger('discord')
+    logger.setLevel(logging.DEBUG)
+    handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+    handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+    logger.addHandler(handler)
     bot = CarlBot()
     bot.run(bot.token)
