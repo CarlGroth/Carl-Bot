@@ -1,122 +1,297 @@
-# Carl Bot
+## prefixes: ! § ?
+\* = optional argument
 
-### A pretty good bot for a pretty good server
+^ = bot owner only
 
-#### Info for nerds
+## Logging
 
-python 3.6
+### Deciding what gets logged
 
-discord.py
+#### !log
+syntax is `!log <event>` where event can be either of:
 
-asyncio
+**avatar, edit, role, delete, ban, join, name**
 
-markovify
+For example, to disable logging message edits you would type `!log edits`. It will swap to true or false depending on the current setting 
+#### !log ignore/unignore
+Syntax is `!log ignore <channel mention(s)>`
 
-fuzzywuzzy
+will ignore message edits/deletions from the mentioned channels
 
-aiohttp
+replace `ignore` with `unignore` to unignore a channel
 
-## Commands
+### Deciding where the log is shown
 
-* args with an asterisk(\*) are optional
+`!set log #channel`
 
-* / indicates that you can use either of these args (not for the same purpose, though)
+### Deciding where twitch streams are announced
 
-* Don't actually type out &lt;&gt;
+`!set twitch #channel`
 
-|Command   |Aliases   |args   |example   |usage   |perms required   |
-|---|---|---|---|---|---|
-|!say   |   |&lt;message&gt;   |!say I'm sentient!   |Causes the bot to say what you put after !say   |none   |
-|!bread   |   |&lt;@mention&gt;   |!bread @Carlg#3516   |Sends bread to the first mentioned user   |none   |
-|!weather   |temp   |&lt;location&gt; |!weather stockholm   |Returns weather information for the specified location. Use !weather home &lt;location&gt; to set a home.   |none   |
-|!roll   |dice   |&lt;sides&gt;\* &lt;rolls&gt;\*   |!roll 100   |Rolls a die, defaults to 6 sides and 1 rolls if nothing else is specified   |none   |
-|!affix   |m+/affixes   |none   |!affix   |Returns current and future m+ affixes, updates automatically   |none   |
-|!choose   |choice/pick   |comma separated   |!choose a b, c d   |Randomly selects one of your arguments   |none   |
-|!tag   |   |+/+=/-/search &lt;tagname&gt; &lt;tagcontent&gt;   |!tag + xy xd   |See below   |none   |
-|!retard   |   |&lt;@mention&gt;   |!retard @JayGarrick_#9390    |Lets the first mentioned user know they're retarded, use !retard top for highscores   |none   |
-|!sc   |   |&lt;text&gt;   |!sc smallcaps only   |Returns your text as ꜱᴍᴀʟʟᴄᴀᴘꜱ    |none   |
-|!spook   |   |&lt;@mention&gt;   |!spook @Carlg#3516   |Spooks the mentioned user!   |none   |
-|!speak   |   |&lt;repeats&gt;\* OR &lt;@mention&gt;\*  |!speak 20   |Uses markov chains to generate sentences based on what you've said in the past, defaults to 3 repeats from yourself   |none   |
-|!ignorechannel   |   |&lt;#channelmentions&gt;   |!ignorechannel #log   |Makes the bot ignore any commands in the mentioned channel (whitelisted users bypass this)   |WL   |
-|!bio   |  |+/+=/&lt;@mention&gt;    |!bio @Kintark#0588    |Like tags but user specific and ONLY EDITABLE BY YOURSELF   |none, however WL perms are required for infinite bio length   |
-|!sicklad   |   |&lt;@mention&gt;/top   |!sicklad @Kintark#0588   |Like !retard but good!   |none   |
-|!8ball   |   |&lt;question&gt;\*   |!8ball Will anyone read this?   |Does the same thing as any 8ball command   |none   |
-|!pickmyspec   |   |none   |!pickmyspec   |Randomly picks a wow spec   |none   |
-|!pickmyclass   |   |none   |!pickmyclass   |Randomly picks a wow class   |none   |
-|!pickmygold   |pickmyhero   |none   |!pickmygold   |Randomly picks an overwatch hero   |none   |
-|!timer   |   |&lt;number&gt; &lt;time unit&gt;\* &lt;note&gt;\*   |!timer 3h24m make dinner   |Reminds you about &lt;note&gt; after the specified time. You can mix hours and minutes   |none   |
-|!d   |   |&lt;word&gt;   |!d agoraphobia   |Looks up the definition of the word   |none   |
-|!lvl   |   |&lt;lower level&gt; &lt;higher level&gt;   |!lvl 92 99   |Returns the xp difference between two osrs levels.   |none   |
-|!g   |   |&lt;search query&gt;   |!g manhattan project   |Searches the web   |none   |
-|!date   |current_year   |none   |!date   |Returns the date   |none   |
-|!uptime   |   |none   |!uptime   |Checks to see how long the bot has been running for   |none   |
-|!i   |info   |&lt;@mention&gt;   |!i @Carlg#3516  |Returns a lot of info about the mentioned user, click their username for a link to their picture    |none   |
-|!avatar   |   |file upload/&lt;image link&gt;   |!avatar   |Changes the bot's avatar to the image specified   |Carl   |
-|!ban   |   |&lt;@mention&gt;   |!ban @carl-bot#5002    |Fake bans the mentioned user   |none   |
-|!asdban   |   |&lt;@mentions&gt;   |!asdban @carl-bot#5002   |Bans all mentioned users   |WL   |
-|!mute   |   |&lt;@mentions&gt;   |!mute @Furple#1237   |Mutes all mentioned users   |WL   |
-|!unmute   |   |&lt;@mentions&gt;   |!unmute @Furple#1237   |Unmutes all mentioned users   |WL   |
-|!ping   |   |none   |!ping   |Checks to see if the bot is alive and how long it took to process the command   |none   |
-|!postcount   |   |&lt;@mention&gt;\*/top\*   |!postcount @Carlg#3516   |Returns the postcount for the mentioned user   |none   |
-|!nicknames   |   |&lt;@mention&gt;\*   |!postcount   |Returns the nicknames you've had in the past   |none   |
-|!forceban   |   |&lt;ids&gt;   |!forceban 137267770537541632   |Bans the user regardless if they're in the server or not   |Carl   |
-|!cts   |   |&lt;emoji1&gt;\* &lt;emoji2&gt;\*   |!cts :thinking: :thunkang:   |Crosses the streams   |none   |
-|!m   |   |&lt;code&gt;   |   |Runs python code   |Carl   |
-|!echo   |  |&lt;channel mention&gt; &lt;text&gt;   |!echo #general I'm alive!   |Like !say but sneakier   |none   |
-|!wl   |   |&lt;@mentions&gt;   |!wl @Kintark#0588   |Adds the mentioned users to the whitelist   |Carl   |
-|!bl   |   |&lt;@mentions&gt;   |!bl @Antibehroz#1567   |Adds the mentioned users to the blacklist. The bot ignores all commands from blacklisted users   |Carl   |
-|!poll   |   |&lt;text&gt;\*   |!poll Is this a worthles feature?   |Makes a poll with reactions so that you can be biased   |none   |
-|!serverinfo   |   |none   |!serverinfo   |Returns some information about the server   |none   |
-|!search   |   |none   |!search face   |Returns tags that roughly match your search term   |none   |
-|!antiraid   |   |none   |!antiraid   |Purges the channel and deletes any messages posted from accounts that joined less than an hour ago   |WL   |
-|!rtb   |   |none   |!rtb   |Rolls the bones!   |none   |
+### Adding a twitch stream
+Requires "Manage Server"
+`!twitch <twitch name> *<announcement text>`
 
+Twitch name is the name of their channel
+
+Announcement text is what the bot will say in addition to the embed when the stream goes live, defaults to their twitch name.
+(warning: this can contain @everyone by design)
+
+### Deleting a twitch stream
+Requires "Manage Server"
+`!twitch <twitch name>`
+
+## Bot moderation
+
+### Banning a user from using the bot
+These all require "manage server" to work
+
+Ban using `!plonk <@user>`
+
+Unban using `!unplonk <@user>`
+
+Display all plonked users by typing `!plonks`
+
+### Disabling commands per command
+
+`!disable <command>`
+For example: `!disable remindme` 
+
+Will disable the remindme command for all users unless they have manage roles
+
+### Disabling commands per channel
+
+`!ignore channel #channel` or `!ignore all`
+
+Disables ALL commands from being used in the mentioned channel (unless you have manage roles)
+`!unignore #channel` or `!unignore all`
+
+Enables ALL commands from being used in the mentioned channel (unless you have manage roles).
+Please note that `!ignore` will override this
 ## Tags
-The tag command can be used for a number of things. Creating tags, adding to tags, removing tags, searching for tags, returning a list of all tags.
+Tags are server-specific and case insensitive
 
+#### Accessing a tag
+Just use `!<tagname>` multiple words are supported.
 #### Creating tags
-If no tag exists, you can use `!tag + tagname tagcontent`
-#### Replacing tags
-You replace tags the same way you create them. The bot will ask if you want to replace or append the contents, reply with r.
+`!tag +/create/add <tagname> <tag content>`
+
+Tag names can be two words, use double quotes for this
+
+**Examples:**
+
+`!tag + 3ball :8ball::8ball::8ball:`
+
+`!tag + "hey there" I'm a two-word tag!`
+
 #### Appending tags
-If you have a tag that you wish to append something to, use `!tag += tagname tagcontent`. There's no confirmation for this so make sure you've spelled everything right. (this will add a newline before the content)
-#### Deleting tags
-Use `!tag - tagname`
-#### Searching for tags
-Using `!tag search <query>` allows you to search for tags closely resembling your query. (`!tag search face` will return all tags with the word face)
-#### Tag list
-Use `!tag list` for a list of all tags
-#### Using tags
-Simply use `!<tagname>`
+`!tag += <tagname> <tag content>`
+Appends <tag content> on a new line to the tag.
 
-## Common mistakes
+**Example:**
 
-Just end my suffering
+`!tag += tankchat http://i.imgur.com/ONtLdiu.png`
 
-#### Using + to append a tag or bio
+#### Removing tags
+`!tag - <tagname>`
+Removes the tag and all aliases.
+**Example:**
 
-By using `+=` instead of `+` you can append directly without any confirmation
+`!tag - tankchat`
 
-#### Being too specific with your search
+#### Showing information about a tag
+`!tag info <tagname>`
 
-If you only have a rough idea of what you're looking for, keep your search short. It will improve your chance of success
+Shows uses and its ranking on the server compared to other tags
+**Example:**
+`!tag info tankchat`
+#### Showing stats for all tags on a server
+`!tag stats`
+Shows some global and server-specific tag stats
 
-#### Checking weather and userinfo in #general
+#### Returning all tags someone has created
+`!tag mine *<mention>`
 
-Fuck off
+Defaults to yourself, displays all tags you or the user mentioned has created.
 
-#### Using default speak multiple times
+#### Returning all tags
+`!taglist/commands/tags`
 
-`!speak` supports up to 20 repeats. Use `!speak 20` for this
+PMs you all tagnames
 
-#### Mentioning yourself
+#### Retrieving the raw tag content
+`!tag raw <tagname>`
 
-`!bio, !speak, !postcount, !nicknames` all default to the author if nothing else is specified, mentioning yourself has no impact.
+Uses backslash escaping to display **text** as \*\*text\**
 
-#### Using !8ball for a choice
+#### ^ Removing a user's tags
+`!tag purge *<mention>`
 
-There's a command for that
+Removes all tags associated with that user
 
-#### Using !cts with external emojis
+#### Searching for tags (using fuzzy string matching)
 
-The bot only has default emojis + server-specific ones
+`!tag search/!tagsearch/commands <search query>`
+
+Searches for matches, reply with numbers to print the tag
+
+## Bio
+
+#### Accessing a bio
+`!bio *<mention>`
+
+Defaults to yourself
+#### Creating a bio
+`!bio + <biocontent>`
+#### Appending to a bio
+`!bio += <biocontent>`
+
+## Blizzard related commands
+First of all there's a 1/10000 chance per message sent to receive a legendary.
+
+#### RTB
+`!rtb`
+
+Works exactly like the spell in wow did pre-7.2.5
+#### Wow armory
+`!armory/pug <name> <realm> <zone>`
+
+Shows legendaries, ilvl, enchants, gems, traits, progression and m+ stats
+#### Invasion timer
+`!invasion`
+Returns invasion timers for EU and NA
+
+**Tip:**
+use `!rm eu/na` to be reminded when the invasion is up
+#### M+ affixes
+`!m+/affix/affixes`
+Returns current and future m+ affixes and information about them
+#### Pick my x
+`!pickmygold`
+Random ow hero
+
+`!pickmyclass`
+Random wow class
+
+`!pickmyspec`
+Random wow spec
+## General utilities
+### Reminders
+
+#### Remindme
+`!rm <time> <message>`
+
+Time syntax looks something like `4d23h123m` it's one word, supports years, days, hours, minutes and seconds. You can repeat time units and you can go above 60 minutes for instance. Limited to this century. For the reminder to work you need to be in the same server as you were in when you created the reminder.
+#### Display reminders
+`!rm mine`
+#### Remove reminder
+`!rm clear *<id>`
+
+If no id is supplied, it will ask you if you wish to remove _all_ reminders
+#### Copy someone else's reminder
+`!sub <id>`
+
+Will make a copy of the specified reminder with you as the author
+#### Timer (don't use this please)
+`!timer <time> <message>`
+
+Same syntax as `!rm` but won't work across bot crashes, also won't allow you to delete or list reminders, use for things < 5 minutes.
+
+### Definitions
+`!d <word>`
+
+Gives you all definitions for the mentioned word.
+
+### Unit conversion
+`!c/convert <query>`
+
+Uses google to convert pretty much anything, supports currency, distance, temperature, time, anything.
+### Weather
+`!temp/weather *<location>`
+
+Returns weather information about a location, defaults to your home
+#### Setting a home
+Using `!weather` for the first time will save your information. If you wish to change it, you can do so by typing
+
+`!temp home <location>`
+#### Random numbers
+`!roll *<range> *<rolls>`
+
+defaults to 6 and 1
+#### Aesthetics/smallcaps
+`!ae/aesthetics <text>`
+
+`!sc/smallcaps <text>`
+
+Returns the text as Ｆｕｌｌｗｉｄｔｈ or ꜱᴍᴀʟʟᴄᴀᴘꜱ
+
+#### Charinfo
+`!charinfo <characters>`
+
+Returns information about the characters
+
+#### 8Ball
+`!8ball`
+
+Your basic shitty 8ball function, rate limited to two uses/channel/minute
+
+## Fun/stupid
+### Echo
+`!echo #channel <text>`
+
+Will make the bot say what you put as `<text>` in the mentioned #channel
+### Retard
+
+#### Tipping a retard coin
+`!retard <@mention>`
+#### Biggest retards
+`!retard top`
+
+### Sicklad
+
+#### Tipping a sicklad point
+`!sicklad <@mention>`
+#### Sickest lads
+`!sicklad top`
+
+#### Urban dictionary
+`!ud <word>`
+Returns the top definition and example
+
+## Meta
+Commands relating to discord and members in general
+
+#### Nickname history
+`!nicks/nicknames *<@user>`
+
+Returns nickname history for the mentioned user, defaults to yourself.
+
+Since discord doesn't track this, the bot  can only show nicknames since it joined. Duplicates are deleted and only the most recent nickname is shown.
+
+#### Userinfo
+`!i *<@user>`
+Will show your name, discriminator, ID, last five nicknames, postcount (since the bot has been in the server), creation date, join date and avatar (click the name). Defaults to yourself, hides fields with 0.
+#### Serverinfo
+`!serverinfo`
+Shows ID, owner, if it's partnered, text and voice channels, members by status, and roles.
+
+#### Bot info
+`!about`
+Shows Members, channels, servers, commands, uptime and resource usage.
+
+#### Uptime
+`!uptime` Shows how long the bot has been online for
+
+## Search commands
+
+### Googling
+`!g <query>`
+Works just like googling, supports google cards like definitions and calculators
+
+### Wowhead search
+`!w <query>`
+Returns the most relevant wowhead page
+Alternatively you can wrap words in [[double brackets]] to do the same
+**Example:**
+Hey guys, check out my new [[prydaz]] :kms:
+
