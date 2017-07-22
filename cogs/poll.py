@@ -14,11 +14,6 @@ class Polls:
 
     @commands.command(pass_context=True, no_pm=True)
     async def quickpoll(self, ctx, *questions_and_choices: str):
-        """Makes a poll quickly.
-
-        The first argument is the question and the rest
-        are the choices.
-        """
 
         if len(questions_and_choices) < 3:
             return await self.bot.say('Need at least 1 question with 2 choices.')
@@ -57,3 +52,4 @@ class Polls:
 
 def setup(bot):
     bot.add_cog(Polls(bot))
+    

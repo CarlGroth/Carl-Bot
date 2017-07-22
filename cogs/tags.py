@@ -1,7 +1,6 @@
 import re
 import json
 import math
-import difflib
 import discord
 import datetime
 import sqlite3
@@ -533,3 +532,4 @@ class Tags:
 
 def setup(bot):
     bot.add_cog(Tags(bot))
+    

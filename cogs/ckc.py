@@ -655,10 +655,7 @@ class CoolKidsClub:
         DELAY = 60
         await asyncio.sleep(5)
         first_episode = datetime.datetime(2017, 7, 17, 0, 50, 0)
-        #first_episode = datetime.datetime(2017, 7, 14, 19, 20, 0)
-        print(first_episode)
         while self == self.bot.get_cog("CoolKidsClub"):
-            print("hello bitches")
             a = self.c.execute('SELECT * FROM spoilers')
             a = a.fetchall()
             now = datetime.datetime.utcnow()
@@ -666,15 +663,11 @@ class CoolKidsClub:
             episode, remainder = divmod(difference, 604800)
             episode += 1
             if 0 < remainder <= 3600:
-                print(remainder)
                 for row in a:
                     db_episode = int(row[0])
-                    print(db_episode, episode)
-                    if db_episode == episode:    
-                        print("{} == {}".format(db_episode, episode))                    
+                    if db_episode == episode:                      
                         db_name = row[1]
                         self.c.execute('DELETE FROM spoilers WHERE episode=?', (episode,))
-                        print("deleted ", episode)
                         self.conn.commit()
                         try:
                             server = self.bot.get_server(id="207943928018632705")
@@ -712,3 +705,4 @@ def setup(bot):
     loop = asyncio.get_event_loop()
     loop.create_task(f.got_checker())
     bot.add_cog(f)
+    

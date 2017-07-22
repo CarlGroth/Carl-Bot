@@ -16,16 +16,6 @@ from collections import Counter
 from io import BytesIO
 
 
-# conn = sqlite3.connect('database.db')
-# c = conn.cursor()
-dt_format = '%Y-%m-%d %H:%M:%S'
-
-# c.execute('''CREATE TABLE messages
-#              (unix real, timestamp timestamp, content text, id text, author text, channel text, server text)''')
-
-
-#c.execute("INSERT INTO messages VALUES ({}, {}, {}, {}, {}, {}".format(message.timestamp, message.clean_content, message.id, message.author.id, message.channel.id, message.server.id))
-
 def log(message):
     file_path = "logs/{}/".format(message.server.id)
     directory = os.path.dirname(file_path)
@@ -36,7 +26,7 @@ def log(message):
 
 
 
-
+# Yes, I saved all the legendaries like this, sue me
 legendaries = [
     "[Acherus Drapes]",
     "[Shackles of Bryndaor]",
@@ -490,3 +480,4 @@ class StatTrak:
 
 def setup(bot):
     bot.add_cog(StatTrak(bot))
+    

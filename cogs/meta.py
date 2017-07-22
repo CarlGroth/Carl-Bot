@@ -546,6 +546,10 @@ class Meta:
             await asyncio.sleep(1)
 
         await self.bot.say('go')
+    @commands.command(pass_context=True)
+    async def help(self, ctx):
+        url = r"https://github.com/CarlGroth/Carl-Bot/blob/master/readme.md"
+        await self.bot.send_message(ctx.message.author, 'Check out the commands on github: {}\nor PM Carl if you have any unanswered questions.'.format(url))
 
 
 def setup(bot):

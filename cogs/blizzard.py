@@ -500,6 +500,9 @@ class Blizzard:
 
         await self.bot.say("**EU: **{}\n**NA: **{}".format(eufmt, nafmt))
 
+
+       
+
     @commands.command(pass_context=True, aliases=["m+", "affixes"])
     async def affix(self, ctx):
         nerd_epoch = datetime.datetime(year=2017, month=1, day=18, hour=7, minute=0, second=0, microsecond=0)

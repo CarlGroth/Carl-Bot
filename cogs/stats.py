@@ -14,15 +14,6 @@ log = logging.getLogger()
 
 LOGGING_CHANNEL = "233091778419490816"
 
-my_api_key = "AIzaSyBhCZhQ0AeoXpFPBN2_V9uX-4MqyuM68mE"
-
-my_cse_id = "006394686611960494076:ri5_dpvpnfe"
-
-
-def google_search(search_term, api_key, cse_id, **kwargs):
-    service = build("customsearch", "v1", developerKey=api_key)
-    res = service.cse().list(q=search_term, cx=cse_id, **kwargs).execute()
-    return res['items']
 
 class Stats:
     def __init__(self, bot):
@@ -58,22 +49,7 @@ class Stats:
 
         for page in p.pages:
             await self.bot.say(page)
-    # @commands.command(pass_context=True, name="g", aliases=['google'])
-    # async def _g(self, ctx, *, query : str):
-    #     user = ctx.message.author
-    #     usercolor = user.color
-    #     em = discord.Embed(title="Google search", description="", colour=usercolor)
-    #     em.set_author(name=user.display_name, icon_url=user.avatar_url, url=user.avatar_url)
-    #     postme = ''
-    #     results = google_search(query, my_api_key, my_cse_id, num=4)
-    #     url = results[0]['link']
-    #     snippet = results[0]['snippet']
-    #     em.add_field(name=url, value=snippet, inline=True)
-    #     for i in range(1, 4):
-    #         url = results[i]['link']
-    #         postme += "{}\n".format(url)
-    #     em.add_field(name="See also", value=postme, inline=True)
-    #     await self.bot.send_message(ctx.message.channel, embed=em)
+
 
     @commands.command(hidden=True)
     async def socketstats(self):
@@ -230,3 +206,4 @@ def setup(bot):
 
 def teardown(bot):
     commands.Bot.on_error = old_on_error
+    

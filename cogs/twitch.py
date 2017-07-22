@@ -157,4 +157,3 @@ def setup(bot):
     loop = asyncio.get_event_loop()
     loop.create_task(n.stream_checker())
     bot.add_cog(n)
-    
