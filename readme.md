@@ -1,8 +1,18 @@
-## prefixes: ! § ?
 \* = optional argument
 
 ^ = bot owner only
 
+## Prefixes
+#### Displaying all prefixes for the server
+`!prefix` (defaults to mentioning the bot, ! and ?)
+#### Adding a prefix
+`!prefix add <prefix>`
+If your prefix has a space at the end, enclose it in double quotes.
+
+#### Removing a prefix
+`!prefix remove <prefix>`
+#### Clearing all prefixes
+`!prefix clear`
 ## Logging
 
 ### Deciding what gets logged
@@ -48,9 +58,14 @@ These all require "manage server" to work
 
 Ban using `!plonk <@user>`
 
-Unban using `!unplonk <@user>`
+Unban using `!plonk <@user>`
+
+Ban a user from using a specific command `!plonk <@user> <command>`
+Banning a user from a specific command bans them from using any subcommand for that as well (`!temp` means you can't use `!temp home` etc.)
 
 Display all plonked users by typing `!plonks`
+
+
 
 ### Disabling commands per command
 
@@ -58,16 +73,21 @@ Display all plonked users by typing `!plonks`
 For example: `!disable remindme` 
 
 Will disable the remindme command for all users unless they have manage roles
+### Disabling all commands
 
+Either use `!disable all`
+Which will add all commands to the blacklist (this means that any future commands won't be blacklisted)
+or use `!disable server`
+Which will actually disable the server from having any command registered (manage server bypasses this)
 ### Disabling commands per channel
 
-`!ignore channel #channel` or `!ignore all`
+`!ignore #channel` or `!ignore all`
 
 Disables ALL commands from being used in the mentioned channel (unless you have manage roles)
 `!unignore #channel` or `!unignore all`
 
 Enables ALL commands from being used in the mentioned channel (unless you have manage roles).
-Please note that `!ignore` will override this
+
 ## Tags
 Tags are server-specific and case insensitive
 
@@ -83,6 +103,21 @@ Tag names can be two words, use double quotes for this
 `!tag + 3ball :8ball::8ball::8ball:`
 
 `!tag + "hey there" I'm a two-word tag!`
+
+### Advanced tag usage
+`%user` - Nickname of the mentioned user or the author if nobody is mentioned.
+
+`%channel` - Name of the mentioned channel or the channel the command was invoked in if there are no mentions.
+
+`%server` - Name of the server.
+
+`%author` - Nickname of the person who used the command (not the one who created it).
+
+`%mention` - Nickname of the first mentioned user or NOTHING if there's no mention.
+
+In addition to these you can use `%nuser, %nauthor and %mention` which will return the discord name instead of their nickname.
+
+`{{arg1, arg2, arg3}}` Enclosing comma separated words with double curly brackets will choose one at random. Supports having more than one list per tag and can contain the variables listed above.
 
 #### Appending tags
 `!tag += <tagname> <tag content>`
