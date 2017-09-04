@@ -30,6 +30,9 @@ def write_json(filename, contents):
         json.dump(contents, outfile, ensure_ascii=True, indent=4)
 
 
+
+
+# This is for the "3 hours and 27 minutes" format for invasions
 def blizzard_time(dt):
     delta = dt
     hours, remainder = divmod(int(delta.total_seconds()), 3600)
@@ -124,6 +127,10 @@ OW_Heroes = [
 
 RTB_BUFFS = ["Shark Infested Waters", "Grand Melee", "Jolly Roger", "True Bearing", "Broadsides", "Buried Treasure"]
 
+
+
+# This appears to be exactly how it works in game
+
 def roll():
     die = [1, 2, 3, 4, 5, 6]
     return choice(die, 6)
@@ -198,78 +205,6 @@ WOW_SPECS = [
 
 
 
-
-
-
-def id_to_boss(id):
-    x = {
-        1849 : "Skorpyron",
-        1865 : "Chronomatic Anomaly",
-        1867 : "Trilliax",
-        1871 : "Spellblade Aluriel",
-        1863 : "Star Augur Etraeus",
-        1886 : "High Botanist Tel'arn",
-        1842 : "Krosus",
-        1862 : "Tichondrius",
-        1872 : "Grand Magistrix Elisande",
-        1866 : "Gul'dan"
-
-    }
-    return x[id]
-
-async def get_wcl(character, server, region):
-    url = r"https://www.warcraftlogs.com:443/v1/rankings/character/{}/{}/{}?api_key=a574df48a822ce7117aa29a901613025".format(character, server, region)
-    async with aiohttp.get(url) as r:
-        response = await r.json()
-    
-    parsedict = {}
-    for fight in response:
-        for value in fight:
-            boss = fight["encounter"]
-            boss = id_to_boss(boss)
-            if fight["difficulty"] == 5:
-                try:
-                    parsedict[boss]["M"] = {"rank" : fight["rank"], "outOf" : fight["outOf"]}
-                except:
-                    parsedict[boss] = {}
-                    parsedict[boss]["M"] = {"rank" : fight["rank"], "outOf" : fight["outOf"]}
-            if fight["difficulty"] == 4:
-                try:
-                    parsedict[boss]["H"] = {"rank" : fight["rank"], "outOf" : fight["outOf"]}
-                except:
-                    parsedict[boss] = {}
-                    parsedict[boss]["H"] = {"rank" : fight["rank"], "outOf" : fight["outOf"]}
-            if fight["difficulty"] == 3:
-                try:
-                    parsedict[boss]["N"] = {"rank" : fight["rank"], "outOf" : fight["outOf"]}
-                except:
-                    parsedict[boss] = {}
-                    parsedict[boss]["N"] = {"rank" : fight["rank"], "outOf" : fight["outOf"]}
-
-    fancy_string = ""
-    for boss in parsedict:
-        fmt = "{}: {:.0f}% {}\n"
-        for difficulty in parsedict[boss]:
-            if parsedict[boss][difficulty]["rank"] == 1:
-                percentile = 100.0
-            else:
-                percentile = math.floor(100 * (1 - (parsedict[boss][difficulty]["rank"]/parsedict[boss][difficulty]["outOf"])))
-            if difficulty == "N":
-                fancy_string += fmt.format(boss, percentile, difficulty)
-                break
-            elif difficulty == "H":
-                fancy_string += fmt.format(boss, percentile, difficulty)
-                break
-            elif difficulty == "M":
-                fancy_string += fmt.format(boss, percentile, difficulty)
-                break
-            else:
-                fancy_string += "{}: N/A".format(difficulty)
-                break
-    return fancy_string
-  
-        
-
 class Blizzard:
 
     def __init__(self, bot):
@@ -277,59 +212,67 @@ class Blizzard:
         self.realms = load_json('realms.json')
 
     @commands.command()
-    async def pickmyspec(self):
-        await self.bot.say(random.choice(WOW_SPECS))
+    async def pickmyspec(self, ctx):
+        await ctx.send(random.choice(WOW_SPECS))
 
     @commands.command()
-    async def pickmyclass(self):
-        await self.bot.say(random.choice(WOW_CLASSES))
+    async def pickmyclass(self, ctx):
+        await ctx.send(random.choice(WOW_CLASSES))
 
     @commands.command()
-    async def pickmygold(self):
-        await self.bot.say(random.choice(OW_Heroes))
+    async def pickmygold(self, ctx):
+        await ctx.send(random.choice(OW_Heroes))
 
-    @commands.command(pass_context=True)
-    async def wcl(self, ctx, character : str, server : str, region : str):
-        await get_wcl(character, server, region)
-    @commands.command(pass_context=True, aliases=['pug'])
+    @commands.command(aliases=['pug'])
     async def armory(self, ctx):
         leftover_args = ctx.message.content.split()
         leftover_args = leftover_args[1:]
         if len(leftover_args) >= 4:
+            # 
             realm = "-".join(leftover_args[1:-1]).lower()
         else:
             realm = leftover_args[-2].lower()
         zone = leftover_args[-1].lower()
+        # Since it's unreasonable to remember if it's us or na
         if zone.lower() in ["na", "oce", "america", "br", "merica", "murica", "us"]:
             zone = "us"
         elif zone.lower() in ["europe", "uk", "eur", "euro", "de", "fr", "ru", "sp", "eu"]:
             zone = "eu"
         else:
-            await self.bot.send_message(ctx.message.channel, 'Zone "{}" not recognized, please use eu or us.'.format(leftover_args[-1].replace("@", "@\u200b")))
+            await ctx.send('Zone "{}" not recognized, please use eu or us.'.format(leftover_args[-1].replace("@", "@\u200b")))
             return
         locales = {"us":"en_US","eu":"en_GB","kr":"ko_KR","tw":"zh_TW"}
         locale = locales[zone]
         replaced = False
         if realm.lower() not in self.realms[zone] and zone in locales:
+            # Super high tech fuzzy string matching
+            # incredibly helpful since blizzard doesn't seem to
+            # have any consistensy across their realm names
+            # will correct "tarnmil" to "tarren-mill" works for russian servers too
             realm2 = process.extractOne(realm.lower(), self.realms[zone])
+            # I think I'm the only person who actually cares about the ratio, but at least
+            # it makes fun of the person for not being able to spell
             fmt = "{} was replaced by {}. ratio: {}%".format(realm, realm2[0], realm2[1])
             realm = realm2[0]
             replaced = True
         name = leftover_args[0].lower()
-        url = "https://"+zone+".api.battle.net/wow/character/"+realm+"/"+name+"?fields=items&locale="+locale+"&apikey="+"ff5hn9c45m89csed7h2vbt97zkrcsyqf"
-        async with aiohttp.get(url) as r:
-            response = await r.json()
-            if "status" in response:
-                if response["status"] == 'nok':
-                    await self.bot.say("Could not fetch character info, error: `{}`".format(response["reason"]))
-                    if not ctx.message.channel.is_private:
-                        await self.bot.delete_message(ctx.message)
-                    return
+        url = "https://"+zone+".api.battle.net/wow/character/"+realm+"/"+name+"?fields=items&locale="+locale+"&apikey="+"TOKEN"
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as r:
+                response = await r.json()
+                if "status" in response:
+                    if response["status"] == 'nok':
+                        await ctx.send("Could not fetch character info, error: `{}`".format(response["reason"]))
+                        if not ctx.guild is None:
+                            await ctx.message.delete()
+                        return
 
-        url = "https://"+zone+".api.battle.net/wow/character/"+realm+"/"+name+"?fields=progression&locale="+locale+"&apikey="+"ff5hn9c45m89csed7h2vbt97zkrcsyqf"
-        async with aiohttp.get(url) as r:
-            progressionresponse = await r.json()
+        url = "https://"+zone+".api.battle.net/wow/character/"+realm+"/"+name+"?fields=progression&locale="+locale+"&apikey="+"TOKEN"
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as r:
+                progressionresponse = await r.json()
         try:
+            # This only seems to work 50% of the time
             avatar_url = progressionresponse["thumbnail"]
             avatar_url = "https://render-api-eu.worldofwarcraft.com/static-render/"+zone+"/"+avatar_url
         except:
@@ -355,7 +298,7 @@ class Blizzard:
                     if "gem0" in items[i]["tooltipParams"]:
                         equipped_gems += 1
         
-        traits = -3
+        traits = -3 # For some reason the api gives you the traits with relics included (fuck off with netherlight btw)
         for i in artifact["artifactTraits"]:
             if i["rank"] != 0:
                 traits += i["rank"]
@@ -370,11 +313,11 @@ class Blizzard:
         legendary_string = ""
         if legendaries != {}:
             for k, v in legendaries.items():
-                print(k, v)
                 legendary_string += "[{}](http://www.wowhead.com/item={})\n".format(v["name"], v["id"])
         else:
             legendary_string = "No legendaries"
-        ilvl = "{0}/{1}".format(*ilvllist)
+        
+        ilvl = "{1}/{0}".format(*ilvllist)
         emerald_nightmare = progressionresponse["progression"]["raids"][35]
         en_progress = {
             "N":0,
@@ -430,9 +373,10 @@ class Blizzard:
             if i["mythicKills"] != 0:
                 tos_progress["M"] += 1
 
-        url = "https://"+zone+".api.battle.net/wow/character/"+realm+"/"+name+"?fields=progression+achievements&locale="+locale+"&apikey="+"ff5hn9c45m89csed7h2vbt97zkrcsyqf"
-        async with aiohttp.get(url) as r:
-            rx = await r.json()
+        url = "https://"+zone+".api.battle.net/wow/character/"+realm+"/"+name+"?fields=progression+achievements&locale="+locale+"&apikey="+"TOKEN"
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as r:
+                rx = await r.json()
         wcl_url = "https://www.warcraftlogs.com/character/{}/{}/{}".format(zone, realm, name)
         armory_url = "https://worldofwarcraft.com/{}/character/{}/{}".format(locale, realm, name)
         mythicplus = get_mythic_progression(rx) or ""
@@ -440,10 +384,6 @@ class Blizzard:
         prog2 = "N: {}/3\nH: {}/3\nM: {}/3".format(tov_progress["N"], tov_progress["H"], tov_progress["M"])
         prog3 = "N: {}/10\nH: {}/10\nM: {}/10".format(nh_progress["N"], nh_progress["H"], nh_progress["M"])
         prog4 = "N: {}/9\nH: {}/9\nM: {}/9".format(tos_progress["N"], tos_progress["H"], tos_progress["M"])
-        print(legendary_string)
-        print(ilvl, enchants, equipped_gems, total_gems, traits)
-        print(prog1, prog2, prog3, prog4)
-        print("+2   : {}\n+5   : {}\n+10 : {}\n+15 : {}".format(mythicplus["plus_two"], mythicplus["plus_five"], mythicplus["plus_ten"], mythicplus["plus_fifteen"]))
         #wcl = await get_wcl(name, realm, zone)
         e = discord.Embed(title="Pug info", description="[Warcraftlogs]({})\n[Armory]({})".format(wcl_url, armory_url), colour=0xffffff)
         e.set_thumbnail(url=avatar_url)
@@ -457,15 +397,19 @@ class Blizzard:
         #e.add_field(name="wcl", value=wcl, inline=True)
         #e.add_field(name=, value="{}/4".format(enchants), inline=True)
         if replaced:            
-            await self.bot.say(fmt, embed=e)
+            await ctx.send(fmt, embed=e)
         else:
-            await self.bot.say(embed=e)
+            await ctx.send(embed=e)
 
 
 
 
-    @commands.command(pass_context=True, aliases=['invasions'])
+    @commands.command(aliases=['invasions'])
     async def invasion(self, ctx):
+        # Invasions have a pattern of 6½ hours on, 12 hours off
+        # Because of this we can determine if an invasion is active or not
+        # Based on the number of seconds that have passed since any arbitrarily chosen invasion
+        # 66600 seconds is 6.5+12 hours
         eu_anchor = datetime.datetime(year=2017, month=5, day=26, hour=22, minute=30, second=0, microsecond=0)
         na_anchor = datetime.datetime(year=2017, month=5, day=26, hour=12, minute=0, second=0, microsecond=0)
         eu_seconds_since = datetime.datetime.utcnow() - eu_anchor
@@ -498,20 +442,27 @@ class Blizzard:
             naprintme = blizzard_time(dt)
             nafmt = "<:redtick:318044813444251649> There is no invasion going on right now, next one in {}.".format(naprintme)
 
-        await self.bot.say("**EU: **{}\n**NA: **{}".format(eufmt, nafmt))
+        await ctx.send("**EU: **{}\n**NA: **{}".format(eufmt, nafmt))
 
 
        
 
-    @commands.command(pass_context=True, aliases=["m+", "affixes"])
+    @commands.command(aliases=["m+", "affixes"])
     async def affix(self, ctx):
+        # affixes are synced between eu and na now
+        # that doesn't mean they're always the same
+        # because of the reset date (tuesday vs wednesday)
+        # this command will take that into account and show
+        # both regions affixes when there's a clash
         nerd_epoch = datetime.datetime(year=2017, month=1, day=18, hour=7, minute=0, second=0, microsecond=0)
         EU_time = datetime.datetime.utcnow()
         NA_time = EU_time - datetime.timedelta(hours=-16)
         EU_indexthis = EU_time - nerd_epoch
         NA_indexthis = NA_time - nerd_epoch
+        # weeks since our anchor
         E = EU_indexthis.days // 7
         N = NA_indexthis.days // 7
+        # iterating over the list, restarting when we reach the end
         E = (E+2) % 12
         N = (N+2) % 12
         author = ctx.message.author
@@ -544,22 +495,19 @@ class Blizzard:
             em.add_field(name="In three weeks", value="**EU & NA:**\n{}\n{}\n{}\n\n".format(AFFIX1[E], AFFIX2[E], AFFIX3[E]), inline=True)
             
         
-        await self.bot.send_message(ctx.message.channel, embed=em)
+        await ctx.send(embed=em)
 
-    @commands.command(pass_context=True)
-    async def rtb(self, ctx):
-        if ctx.message.channel.is_default:
-            try:
-                destination = discord.utils.find(lambda m: "bot" in m.name, ctx.message.server.channels)
-                xd = await self.bot.send_message(destination, ctx.message.author.mention)
-                await self.bot.delete_message(ctx.message)
-            except:
-                destination = ctx.message.channel
-            
-        else:
-            destination = ctx.message.channel
-        await self.bot.send_message(destination, roll_the_bones())
+    @commands.command()
+    async def rtb(self, ctx):     
+        await ctx.send(roll_the_bones())
 
+    # @commands.command()
+    # async def rtbbomb(self, ctx):
+    #     fmt = ""
+    #     for _ in range(10):
+    #         fmt += f"{roll_the_bones()}\n"
+    #     await ctx.send(fmt)
+    # Don't you dare beat me at this again, yenni
 
 def setup(bot):
     bot.add_cog(Blizzard(bot))

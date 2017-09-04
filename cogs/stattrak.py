@@ -8,6 +8,7 @@ import os
 import json
 import sqlite3
 import re
+#import matplotlib.pyplot as plt
 
 
 from cogs.utils import checks, config
@@ -16,17 +17,700 @@ from collections import Counter
 from io import BytesIO
 
 
-def log(message):
-    file_path = "logs/{}/".format(message.server.id)
-    directory = os.path.dirname(file_path)
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-    with open("logs/{}/{}.txt".format(message.server.id, message.author.id), "a", encoding="utf-8") as f:
-        f.write("{}\n".format(message.clean_content))
-
-
-
+dt_format = '%Y-%m-%d %H:%M:%S'
 # Yes, I saved all the legendaries like this, sue me
+uniques = [
+    "Ahn's Heritage",
+    "Bisco's Collar",
+    "Bisco's Leash",
+    "Collateral Damage",
+    "Fight for Survival",
+    "First Snow",
+    "Frozen Trail",
+    "Garukhan's Flight",
+    "Gruthkul's Pelt",
+    "Haemophilia",
+    "Inevitability",
+    "Martyr of Innocence",
+    "Might and Influence",
+    "Omen on the Winds",
+    "Overwhelming Odds",
+    "Ring of Blades",
+    "Ryslatha's Coil",
+    "Sudden Ignition",
+    "The Baron",
+    "The Wise Oak",
+    "Tidebreaker",
+    "Violent Dead",
+    "Wildfire",
+    "Winter Burial",
+    "Abberath's Hooves",
+    "Angler's Plait",
+    "Arakaali's Fang",
+    "Choir of the Storm",
+    "Duskdawn",
+    "Esh's Mirror",
+    "Esh's Visage",
+    "Ewar's Mirage",
+    "Hand of Thought and Motion",
+    "Hand of Wisdom and Action",
+    "Kitava's Feast",
+    "Light of Lunaris",
+    "Lycosidae",
+    "Malachai's Vision",
+    "Ngamahu's Flame",
+    "Perseverance",
+    "Presence of Chayula",
+    "Primordial Eminence",
+    "Primordial Harmony",
+    "Primordial Might",
+    "Severed in Sleep",
+    "Shade of Solaris",
+    "Sin's Rebirth",
+    "Skin of the Lords",
+    "Skin of the Loyal",
+    "The Anima Stone",
+    "The Anticipation",
+    "The Blue Dream",
+    "The Blue Nightmare",
+    "The Brine Crown",
+    "The Formless Flame",
+    "The Formless Inferno",
+    "The Green Dream",
+    "The Green Nightmare",
+    "The Halcyon",
+    "The Infinite Pursuit",
+    "The Pandemonius",
+    "The Perfect Form",
+    "The Red Dream",
+    "The Red Nightmare",
+    "The Red Trail",
+    "The Snowblind Grace",
+    "The Surrender",
+    "Tukohama's Fortress",
+    "Tulborn",
+    "Tulfall",
+    "United in Dream",
+    "Uul-Netol's Embrace",
+    "Uul-Netol's Kiss",
+    "Voice of the Storm",
+    "Voll's Vision",
+    "Xoph's Blood",
+    "Xoph's Heart",
+    "Xoph's Inception",
+    "Xoph's Nurture",
+    "Brain Rattler",
+    "Cospri's Malice",
+    "Dying Sun",
+    "Eye of Innocence",
+    "Hallowed Ground",
+    "Kitava's Thirst",
+    "Kondo's Pride",
+    "Obscurantis",
+    "Praxis",
+    "Razor of the Seventh Sun",
+    "Shaper's Touch",
+    "Slivertongue",
+    "Snakepit",
+    "Starforge",
+    "The Brass Dome",
+    "The Putrid Cloister",
+    "The Scourge",
+    "The Warden's Brand",
+    "Unending Hunger",
+    "Valyrium",
+    "Voidwalker",
+    "Witchfire Brew",
+    "Amplification Rod",
+    "Ascent From Flesh",
+    "Ashcaller",
+    "Breath of the Council",
+    "Cloak of Tawm'r Isley",
+    "Coated Shrapnel",
+    "Cospri's Will",
+    "Cragfall",
+    "Death's Door",
+    "Death's Opus",
+    "Deidbellow",
+    "Doomfletch's Prism",
+    "Emperor's Mastery",
+    "Ezomyte Hold",
+    "Grand Spectrum",
+    "Grand Spectrum",
+    "Grand Spectrum",
+    "Grip of the Council",
+    "Hiltless",
+    "Hinekora's Sight",
+    "Hrimburn",
+    "Hrimnor's Dirge",
+    "Innsbury Edge",
+    "Kaltensoul",
+    "Kaom's Way",
+    "Karui Charge",
+    "Kiara's Determination",
+    "Kintsugi",
+    "Martyr's Crown",
+    "Mind of the Council",
+    "Ngamahu Tiki",
+    "Nuro's Harp",
+    "Queen's Escape",
+    "Reach of the Council",
+    "Realm Ender",
+    "Reefbane",
+    "Saemus' Gift",
+    "Scaeva",
+    "Shavronne's Gambit",
+    "Silverbough",
+    "Skirmish",
+    "The Ascetic",
+    "The Beast Fur Shawl",
+    "The Cauteriser",
+    "The Dancing Dervish",
+    "The Gryphon",
+    "The Oak",
+    "The Overflowing Chalice",
+    "The Signal Fire",
+    "The Tempest",
+    "Thirst for Horrors",
+    "Three-step Assault",
+    "Touch of Anguish",
+    "Veruso's Battering Rams",
+    "Voidheart",
+    "Wall of Brambles",
+    "Emperor's Cunning",
+    "Emperor's Might",
+    "Emperor's Wit",
+    "Star of Wraeclast",
+    "Advancing Fortress",
+    "Axiom Perpetuum",
+    "Cheap Construction",
+    "Clayshaper",
+    "Daresso's Passion",
+    "Essence Worm",
+    "Frostbreath",
+    "Geofri's Sanctuary",
+    "Glitterdisc",
+    "Hair Trigger",
+    "Heretic's Veil",
+    "Iron Commander",
+    "Malachai's Loop",
+    "Obliteration",
+    "Reckless Defence",
+    "Rive",
+    "Seven-League Step",
+    "Singularity",
+    "The Perandus Manor",
+    "The Sorrow of the Divine",
+    "The Tempestuous Steel",
+    "The Writhing Jar",
+    "Trypanon",
+    "Umbilicus Immortalis",
+    "Unstable Payload",
+    "Varunastra",
+    "Victario's Charity",
+    "Viper's Scales",
+    "Widowmaker",
+    "Wyrmsign",
+    "Xirgil's Crank",
+    "Zerphi's Last Breath",
+    "Demigod's Dominance",
+    "Winterheart",
+    "Slivers of Providence",
+    "Agnerod West",
+    "Allure",
+    "Bitterdream",
+    "Blightwell",
+    "Caer Blaidd, Wolfpack's Den",
+    "Coruscating Elixir",
+    "Dead Reckoning",
+    "Eclipse Solaris",
+    "Extractor Mentis",
+    "Eyes of the Greatwolf",
+    "Faminebind",
+    "Feastbind",
+    "Femurs of the Saints",
+    "Growing Agony",
+    "Hezmana's Bloodlust",
+    "Kongming's Stratagem",
+    "Natural Hierarchy",
+    "Night's Hold",
+    "Pitch Darkness",
+    "Rapid Expansion",
+    "Repentance",
+    "Rigwald's Command",
+    "Rigwald's Crest",
+    "Rigwald's Curse",
+    "Rigwald's Quills",
+    "Rigwald's Savagery",
+    "Rolling Flames",
+    "Rotgut",
+    "Roth's Reach",
+    "Shattered Chains",
+    "Skyforth",
+    "Spirit Guards",
+    "Spirited Response",
+    "Steel Spirit",
+    "Storm Prison",
+    "The Aylardex",
+    "The Goddess Unleashed",
+    "The Retch",
+    "The Vigil",
+    "The Vinktar Square",
+    "Vessel of Vinktar",
+    "Vessel of Vinktar",
+    "Vessel of Vinktar",
+    "Vessel of Vinktar",
+    "Volley Fire",
+    "Weight of the Empire",
+    "Winter's Bounty",
+    "Chitus' Needle",
+    "Izaro's Turmoil",
+    "Izaro's Dilemma",
+    "Soulthirst",
+    "Spine of the First Claimant",
+    "Winds of Change",
+    "Bloodgrip",
+    "Broken Faith",
+    "Steppan Eard",
+    "The Pariah",
+    "Emberwake",
+    "Abberath's Horn",
+    "Agnerod South",
+    "Anatomical Knowledge",
+    "Ancient Waystones",
+    "Apparitions",
+    "Assassin's Haste",
+    "Atziri's Reign",
+    "Blood Sacrifice",
+    "Blood of Corruption",
+    "Bloodplay",
+    "Brawn",
+    "Brinerot Flag",
+    "Brinerot Mark",
+    "Brinerot Whalers",
+    "Brittle Barrier",
+    "Brute Force Solution",
+    "Call of the Brotherhood",
+    "Callinellus Malleus",
+    "Cameria's Maul",
+    "Careful Planning",
+    "Chill of Corruption",
+    "Clear Mind",
+    "Cold Steel",
+    "Combustibles",
+    "Conqueror's Efficiency",
+    "Conqueror's Longevity",
+    "Conqueror's Potency",
+    "Corrupted Energy",
+    "Crown of the Pale King",
+    "Death's Hand",
+    "Demigod's Beacon",
+    "Doedre's Scorn",
+    "Doryani's Fist",
+    "Dreadarc",
+    "Dyadian Dawn",
+    "Efficient Training",
+    "Eldritch Knowledge",
+    "Empire's Grasp",
+    "Energised Armour",
+    "Energy From Within",
+    "Fertile Mind",
+    "Fevered Mind",
+    "Fidelitas' Spike",
+    "Fireborn",
+    "Flesh-Eater",
+    "Fluid Motion",
+    "Fortified Legion",
+    "Fragile Bloom",
+    "Fragility",
+    "Gorebreaker",
+    "Goredrill",
+    "Healthy Mind",
+    "Heartbound Loop",
+    "Hidden Potential",
+    "Hotfooted",
+    "Hungry Abyss",
+    "Ichimonji",
+    "Inertia",
+    "Inspired Learning",
+    "Intuitive Leap",
+    "Jack, the Axe",
+    "Jorrhast's Blacksteel",
+    "Kingmaker",
+    "Kingsguard",
+    "Lakishu's Blade",
+    "Lavianga's Wisdom",
+    "Lion's Roar",
+    "Lioneye's Fall",
+    "Lioneye's Vision",
+    "Malicious Intent",
+    "Mantra of Flames",
+    "Martial Artistry",
+    "Might in All Forms",
+    "Moonbender's Wing",
+    "Mutated Growth",
+    "Mutewind Pennant",
+    "Mutewind Seal",
+    "Mutewind Whispersteps",
+    "Null's Inclination",
+    "Nycta's Lantern",
+    "Ornament of the East",
+    "Pacifism",
+    "Poacher's Aim",
+    "Powerlessness",
+    "Pugilist",
+    "Rain of Splinters",
+    "Realmshaper",
+    "Redblade Band",
+    "Redblade Banner",
+    "Redblade Tramplers",
+    "Relentless Fury",
+    "Sacrificial Harvest",
+    "Self-Flagellation",
+    "Shaper's Seed",
+    "Sire of Shards",
+    "Southbound",
+    "Spire of Stone",
+    "Static Electricity",
+    "Surgebinders",
+    "Survival Instincts",
+    "Survival Secrets",
+    "Survival Skills",
+    "Tear of Purity",
+    "The Consuming Dark",
+    "The Deep One's Hide",
+    "The Princess",
+    "The Restless Ward",
+    "The Stormheart",
+    "The Whispering Ice",
+    "To Dust",
+    "Tremor Rod",
+    "Trolltimber Spire",
+    "Twyzel",
+    "Vaal Sentencing",
+    "Ventor's Gamble",
+    "Victario's Influence",
+    "Warlord's Reach",
+    "Weight of Sin",
+    "Wildslash",
+    "Ylfeban's Trickery",
+    "Black Sun Crest",
+    "Greed's Embrace",
+    "Hall of Grandmasters",
+    "Rashkaldor's Patience",
+    "Warped Timepiece",
+    "Agnerod North",
+    "Bated Breath",
+    "Belt of the Deceiver",
+    "Bloodboil",
+    "Brutus' Lead Sprinkler",
+    "Doomsower",
+    "Great Old One's Ward",
+    "Kikazaru",
+    "Malachai's Artifice",
+    "Maligaro's Lens",
+    "Maligaro's Restraint",
+    "Maloney's Nightfall",
+    "Ngamahu's Sign",
+    "Nomic's Storm",
+    "Prismweave",
+    "Reverberation Rod",
+    "Rumi's Concoction",
+    "Scold's Bridle",
+    "Sibyl's Lament",
+    "Talisman of the Victor",
+    "Tasalio's Sign",
+    "Taste of Hate",
+    "The Blood Thorn",
+    "The Broken Crown",
+    "The Rat Cage",
+    "Timeclasp",
+    "Ungil's Harmony",
+    "Valako's Sign",
+    "Agnerod East",
+    "Demigod's Eye",
+    "Sentari's Answer",
+    "Oba's Cursed Trove",
+    "Whakawairua Tuahu",
+    "Apep's Rage",
+    "Chalice of Horrors",
+    "Cherrubim's Maleficence",
+    "Craghead",
+    "Dreamfeather",
+    "Edge of Madness",
+    "Flesh and Spirit",
+    "Gang's Momentum",
+    "Hegemony's Era",
+    "Mark of the Doubting Knight",
+    "Mokou's Embrace",
+    "Null and Void",
+    "Shadows and Dust",
+    "The Dark Seer",
+    "The Harvest",
+    "Untainted Paradise",
+    "Pledge of Hands",
+    "Pyre",
+    "Thousand Teeth Temu",
+    "Piscator's Vigil",
+    "Blood of Summer",
+    "Death and Taxes",
+    "Forbidden Taste",
+    "Jaws of Agony",
+    "Scar of Fate",
+    "Soul Strike",
+    "Asphyxia's Wrath",
+    "Doomfletch",
+    "Hyaon's Fury",
+    "Kaom's Roots",
+    "Hyrri's Bite",
+    "Incandescent Heart",
+    "Mao Kun",
+    "Mjölner",
+    "Queen of the Forest",
+    "Demigod's Bounty",
+    "The Three Dragons",
+    "Windripper",
+    "Atziri's Acuity",
+    "Atziri's Disfavour",
+    "Atziri's Promise",
+    "Atziri's Splendour",
+    "Atziri's Step",
+    "Doryani's Catalyst",
+    "Doryani's Invitation",
+    "Drillneck",
+    "Rearguard",
+    "The Vertex",
+    "Vaal Caress",
+    "Vis Mortis",
+    "Voideye",
+    "Alberon's Warpath",
+    "Dying Breath",
+    "Skullhead",
+    "Snakebite",
+    "Solaris Lorica",
+    "Dusktoe",
+    "Romira's Banquet",
+    "Shackles of the Wretched",
+    "The Screaming Eagle",
+    "Bino's Kitchen Knife",
+    "Fencoil",
+    "Song of the Sirens",
+    "Veil of the Night",
+    "Wheel of the Stormsail",
+    "Briskwrap",
+    "Daresso's Defiance",
+    "Marylene's Fallacy",
+    "Oro's Sacrifice",
+    "Belly of the Beast",
+    "Lifesprig",
+    "Olmec's Sanctum",
+    "Wings of Entropy",
+    "Ashes of the Sun",
+    "Chains of Time",
+    "Crown of Eyes",
+    "Demigod's Touch",
+    "Doedre's Elixir",
+    "Doon Cuebiyari",
+    "Fragment of Eternity",
+    "Prismatic Eclipse",
+    "Relic of the Cycle",
+    "Remnant of Empires",
+    "Rust of Winter",
+    "Splinter of the Moon",
+    "Tear of Entropy",
+    "Thunder of the Dawn",
+    "Vestige of Divinity",
+    "Berek's Grip",
+    "Berek's Pass",
+    "Berek's Respite",
+    "Blood of the Karui",
+    "Cloak of Defiance",
+    "Dyadus",
+    "Headhunter",
+    "Immortal Flesh",
+    "Lavianga's Spirit",
+    "The Gull",
+    "The Taming",
+    "Deerstalker",
+    "Lightning Coil",
+    "Ming's Heart",
+    "Sunblast",
+    "Cybil's Paw",
+    "Kongor's Undying Rage",
+    "Mon'tregul's Grasp",
+    "Poorjoy's Asylum",
+    "Quecholli",
+    "Devoto's Devotion",
+    "Mindspiral",
+    "The Goddess Scorned",
+    "Voltaxic Rift",
+    "Wideswing",
+    "Deidbell",
+    "Leer Cast",
+    "The Anvil",
+    "Auxium",
+    "Death's Oath",
+    "Soul Taker",
+    "The Blood Dance",
+    "Demigod's Stride",
+    "Divination Distillate",
+    "Infernal Mantle",
+    "Perandus Signet",
+    "Rebuke of the Vaal",
+    "Daresso's Salute",
+    "Death Rush",
+    "Gifts from Above",
+    "Shavronne's Revelation",
+    "Victario's Acuity",
+    "Voll's Devotion",
+    "The Bringer of Rain",
+    "Last Resort",
+    "Void Battery",
+    "Voidbringer",
+    "Lightbane Raiment",
+    "Lori's Lantern",
+    "Thunderfist",
+    "Zahndethus' Cassock",
+    "Al Dhih",
+    "Atziri's Foible",
+    "Storm Cloud",
+    "Acton's Nightmare",
+    "Asenath's Gentle Touch",
+    "Rat's Nest",
+    "Thief's Torment",
+    "Abyssus",
+    "Alpha's Howl",
+    "Aurumvorax",
+    "Soul Mantle",
+    "The Coward's Trial",
+    "Darkray Vectors",
+    "Icetomb",
+    "Pillar of the Caged God",
+    "Tabula Rasa",
+    "Bronn's Lithe",
+    "Carcass Jack",
+    "Rainbowstride",
+    "Rise of the Phoenix",
+    "Bloodseeker",
+    "Chober Chaber",
+    "Thousand Ribbons",
+    "Maelström of Chaos",
+    "Matua Tupuna",
+    "Starkonja's Head",
+    "Chernobog's Pillar",
+    "Heartbreaker",
+    "Le Heup of All",
+    "Shavronne's Wrappings",
+    "Demigod's Triumph",
+    "The Blood Reaper",
+    "Aegis Aurora",
+    "Atziri's Mirror",
+    "Bramblejack",
+    "Foxshade",
+    "Prism Guardian",
+    "Queen's Decree",
+    "The Covenant",
+    "The Supreme Truth",
+    "Mortem Morsu",
+    "Taryn's Shiver",
+    "Goldrim",
+    "Cloak of Flame",
+    "Midnight Bargain",
+    "Titucius' Span",
+    "Ashrend",
+    "Essentia Sanguis",
+    "Infractem",
+    "Victario's Flight",
+    "Bones of Ullr",
+    "Brightbeak",
+    "Carnage Heart",
+    "Chin Sol",
+    "Darkscorn",
+    "Facebreaker",
+    "Goldwyrm",
+    "Limbsplit",
+    "Marohi Erqi",
+    "Quill Rain",
+    "Sin Trek",
+    "Ungil's Gauche",
+    "Voidhome",
+    "Meginord's Vise",
+    "Springleaf",
+    "Vaults of Atziri",
+    "Moonsorrow",
+    "Rime Gaze",
+    "Ambu's Charge",
+    "Reaper's Pursuit",
+    "Saffell's Frame",
+    "Terminus Est",
+    "The Goddess Bound",
+    "Astramentis",
+    "Crest of Perandus",
+    "Daresso's Courage",
+    "Kaltenhalt",
+    "Lioneye's Remorse",
+    "Meginord's Girdle",
+    "Perandus Blazon",
+    "Rathpith Globe",
+    "The Ignomon",
+    "The Magnate",
+    "Wurm's Molt",
+    "Araku Tiki",
+    "Asenath's Mark",
+    "Aurseize",
+    "Chitus' Apex",
+    "Crown of Thorns",
+    "Doedre's Tenure",
+    "Fairgraves' Tricorne",
+    "Geofri's Crest",
+    "Heatshiver",
+    "Honourhome",
+    "Hrimnor's Resolve",
+    "Hrimsorrow",
+    "Hyrri's Ire",
+    "Kaom's Heart",
+    "Lioneye's Paws",
+    "Lochtonial Caress",
+    "Maligaro's Virtuosity",
+    "Mightflay",
+    "Ondar's Clasp",
+    "Sadima's Touch",
+    "Shavronne's Pace",
+    "Slitherpinch",
+    "Sundance",
+    "The Peregrine",
+    "Wake of Destruction",
+    "Wanderlust",
+    "Windscream",
+    "Wondertrap",
+    "Blackgleam",
+    "Broadstroke",
+    "Death's Harp",
+    "Doedre's Damning",
+    "Dream Fragments",
+    "Eye of Chayula",
+    "Ezomyte Peak",
+    "Geofri's Baptism",
+    "Hrimnor's Hymn",
+    "Karui Ward",
+    "Malachai's Simula",
+    "Rigwald's Charge",
+    "Shiversting",
+    "Sidhebreath",
+    "The Searing Touch",
+    "Demigod's Presence",
+    "Divinarius",
+    "Ephemeral Edge",
+    "Silverbranch",
+    "Voll's Protector",
+    "Andvarius",
+    "Blackheart",
+    "Kaom's Sign",
+    "Lioneye's Glare",
+    "Kaom's Primacy",
+    "Redbeak",
+    "Stone of Lazhwar"
+]
 legendaries = [
     "[Acherus Drapes]",
     "[Shackles of Bryndaor]",
@@ -235,248 +919,125 @@ legendaries = [
 class StatTrak:
     
     def __init__(self, bot):
-        self.bot           = bot
+        self.bot = bot
         self.conn = sqlite3.connect('database.db')
         self.c = self.conn.cursor()
         self.c.execute('''CREATE TABLE IF NOT EXISTS messages
              (unix real, timestamp timestamp, content text, id text, author text, channel text, server text)''')
 
-    def get_global_stats(self, dic):
-        return [x[1] for x in sorted(dic["global"]["bigGlobal"].items(), key=lambda x: int(x[0]))]
-
-    def get_server_stats(self, dic, s):
-        return [x[1] for x in sorted(dic[s.id]["serverglobal"].items(), key=lambda x: int(x[0]))]
-
-    def get_channel_stats(self, dic, c):
-        return [x[1] for x in sorted(dic[c.server.id][c.id].items(), key=lambda x: int(x[0]))]
-
-    def get_global_user_stats(self, dic, u):
-        return [x[1] for x in sorted(dic["global"][u.id].items(), key=lambda x: int(x[0]))]
-
-    def get_channel_user_stats(self, dic, c, u):
-        return [x[1] for x in sorted(dic[u.server.id][u.id][c.id].items(), key=lambda x: int(x[0]))]
-
-    def get_server_user_stats(self, dic, u):
-        return [x[1] for x in sorted(dic[u.server.id][u.id]["server"].items(), key=lambda x: int(x[0]))]
-
 
 
     def fix_postcount(self, message):
-        if message.channel.is_private:
+        if message.channel == discord.ChannelType.private:
             return
-        self.c.execute('UPDATE users SET postcount = postcount + 1 WHERE (id=? AND server=?)', (message.author.id, message.server.id))
+        self.c.execute('UPDATE users SET postcount = postcount + 1 WHERE (id=? AND server=?)', (message.author.id, message.guild.id))
         self.conn.commit()
-
 
     # @commands.group(pass_context=True, invoke_without_command=True)
     # async def activity(self, ctx, member : discord.Member = None):
     #     user = ctx.message.author if member is None else member
-    #     y_axis = self.get_global_stats(self.globaldata)
+    #     a = self.c.execute('''SELECT COUNT(id), strftime("%H", timestamp) AS cnt FROM messages WHERE author=55795735311945728 GROUP BY strftime("%H", timestamp) ORDER BY strftime("%H", timestamp) ASC;''')
+    #     a = a.fetchall()
+    #     x_axis = [x for x in range(24)]
+    #     y_axis = [x[0] for x in a]
+    #     y_axis.insert(2, 0)
     #     plt.figure()
-    #     plt.hist(y_axis, self.x_axis)
+    #     x = plt.plot(x_axis, y_axis)
+    #     plt.setp(x, linewidth=1)
     #     plt.xlabel('Hour (UTC+0)')
     #     plt.ylabel('messages posted')
     #     plt.title("Global activity")
     #     buf = BytesIO()
-    #     plt.savefig(buf, format='png', dpi=500)
+    #     plt.savefig(buf, format='png', dpi=1000)
     #     buf.seek(0)
-    #     await self.bot.send_file(ctx.message.channel, fp=buf, filename="suckmydick.png")
+    #     xd = discord.File(fp=buf, filename="suckmydick.png")
+    #     await ctx.send(file=xd)
 
-    # @activity.command(name="server", pass_context=True)
-    # async def _server(self, ctx, *, normalized: str = []):
-    #     print("norm:_",normalized)
-    #     if "norm" in normalized:
-    #         normalized = True
-    #     else:
-    #         normalized = False
-    #     print("norm2", normalized)
-    #     mentions = ctx.message.mentions
-    #     if not mentions:
-    #         mentions = [x for x in ctx.message.server.members]
-    #     mentions = [x.id for x in mentions]
-    #     plt.figure()
-
-    #     server_shit = self.globaldata[ctx.message.server.id]
-    #     names = []
-    #     for user, value in server_shit.items():
-    #         if user == "serverglobal" or user in [x.id for x in ctx.message.server.channels]:
-    #             continue
-    #         elif user not in mentions:
-    #             print(user)
-    #             continue
-    #         userlist = []
-    #         for k, v in value.items():
-    #             if k == "server":
-    #                 shit = v.items()
-    #                 for pair in shit:
-    #                     userlist.append(pair)
-    #         userlist = [x[1] for x in sorted(userlist, key=lambda x: int(x[0]))]            
-    #         normalizer = sum(userlist) or 1
-    #         normalized_userlist = [x/normalizer for x in userlist]
-    #         print(userlist)
-    #         print(normalized_userlist)
-    #         print("normalized = ", normalized)
-    #         y_axis = [userlist, normalized_userlist][normalized]
-    #         print(y_axis)
-    #         plt.plot(self.x_axis, y_axis)
-    #         name = ctx.message.server.get_member(user).name
-    #         print(name)
-    #         names.append(name)
-    #     if len(names) <= 5:
-    #         plt.legend(names)
-    #     plt.xlabel('Hour (UTC+0)')
-    #     if normalized:
-    #         plt.ylabel('activity %')
-    #     else:
-    #         plt.ylabel('messages posted')
-    #     plt.title("Server activity")
-    #     buf = BytesIO()
-    #     plt.savefig(buf, format='png', dpi=500)
-    #     buf.seek(0)
-    #     await self.bot.send_file(ctx.message.channel, fp=buf, filename="suckmydick.png")
-
-
-    # @activity.command(name="channel", pass_context=True)
-    # async def _channel(self, ctx, *, normalized: str = []):
-    #     #print("norm:_",normalized)
-    #     if "norm" in normalized:
-    #         normalized = True
-    #     else:
-    #         normalized = False
-    #     #print("norm2", normalized)
-    #     mentions = ctx.message.channel_mentions
-    #     if not mentions:
-    #         mentions = [x for x in ctx.message.server.channels]
-    #     mentions = [x.id for x in mentions]
-    #     fig, ax = plt.subplots()
-    #     server_shit = self.globaldata[ctx.message.server.id]
-    #     names = []
-    #     for user, value in server_shit.items():
-            
-    #         if user not in mentions:
-    #             continue
-    #         print("user: {}, value: {}".format(user, value))
-    #         userlist = []
-    #         for pair in value.items():
-    #             #if k == "server":
-    #             #for pair in v:
-    #             userlist.append(pair)
-    #         userlist = [x[1] for x in sorted(userlist, key=lambda x: int(x[0]))]            
-    #         normalizer = sum(userlist) or 1
-    #         normalized_userlist = [x/(normalizer/100) for x in userlist]
-    #         # print(userlist)
-    #         # print(normalized_userlist)
-    #         # print("normalized = ", normalized)
-    #         y_axis = [userlist, normalized_userlist][normalized]
-    #         #print(y_axis)
-    #         plt.stackplot(self.x_axis, y_axis)
-    #         name = ctx.message.server.get_channel(user).name
-    #         #print(name)
-    #         names.append(name)
-    #     if len(names) <= 17:
-    #         plt.legend(names)
-    #     plt.xlabel('Hour (UTC+0)')
-    #     if normalized:
-    #         plt.ylabel('activity %')
-    #     else:
-    #         plt.ylabel('messages posted')
-    #     #ax.set_xticks(np.arange(0, 24, 2))
-    #     #plt.grid()
-        
-    #     plt.title(r'$\mathrm{Channel\ activity}$')
-    #     buf = BytesIO()
-    #     plt.savefig(buf, format='png')
-    #     buf.seek(0)
-    #     await self.bot.send_file(ctx.message.channel, fp=buf, filename="suckmydick.png")
-
-            
-
-
-
-    @commands.group(pass_context=True, name="postcount", aliases=['pc'], invoke_without_command=True)
+    @commands.group(name="postcount", aliases=['pc'], invoke_without_command=True)
     async def pc(self, ctx, member : discord.Member = None):        
-        user = ctx.message.author if member is None else member
-        a = self.c.execute('SELECT * FROM users WHERE (server=? AND id=?)', (ctx.message.server.id, user.id))
+        user = ctx.author if member is None else member
+        a = self.c.execute('SELECT * FROM users WHERE (server=? AND id=?)', (ctx.guild.id, user.id))
         a = a.fetchall()[0]
-        await self.bot.say("**{}** has posted **{}** messages.".format(user.name, a[5]))
+        await ctx.send("**{}** has posted **{}** messages.".format(user.name, a[5]))
 
     @pc.command(name="top", pass_context=True)
     async def postcounttop(self, ctx):
-        a = self.c.execute('SELECT * FROM users WHERE server=? ORDER BY postcount DESC LIMIT 20', (ctx.message.server.id,))
+        a = self.c.execute('SELECT * FROM users WHERE (server=? AND postcount > 0) ORDER BY postcount DESC LIMIT 20', (ctx.guild.id,))
         a = a.fetchall()
-        b = self.c.execute('SELECT SUM(postcount) AS "hello" FROM users WHERE server=?', (ctx.message.server.id,))
+        b = self.c.execute('SELECT SUM(postcount) AS "hello" FROM users WHERE (server=? AND postcount > 0)', (ctx.guild.id,))
         b = b.fetchone()[0]
         print(b)
         post_this = ""
-        server = ctx.message.server.id
         rank = 1
         for row in a:
-            name = row[4].split(',')
-            name = name[-1]
-            post_this += ("{}. **{}:** {}\n".format(rank, name, row[5]))
+            name = f'<@{row[3]}>'
+            post_this += ("{}. {} : {}\n".format(rank, name, row[5]))
             rank += 1
-        post_this += "\n**{0}** posts by **{1}** chatters.".format(b,len([x for x in ctx.message.server.members]))
+        post_this += "\n**{0}** posts by **{1}** chatters.".format(b,len([x for x in ctx.guild.members]))
         em = discord.Embed(title="Current standings:", description=post_this, colour=0x14e818)
         em.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar_url)
-        await self.bot.say(embed=em)
+        await ctx.send(embed=em)
 
 
 
     async def on_member_join(self, member):
-        a = self.c.execute('SELECT * FROM users WHERE (id=? AND server=?)', (member.id, member.server.id))
+        a = self.c.execute('SELECT * FROM users WHERE (id=? AND server=?)', (member.id, member.guild.id))
         a = a.fetchall()
         if a != []:
             return
         roles = ','.join([x.id for x in member.roles if (x.name != "@everyone" and x.id != "232206741339766784")])
-        self.c.execute("INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (roles, member.server.id, None, member.id, member.display_name, 0, 0, 0))
+        self.c.execute("INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (roles, member.guild.id, None, member.id, member.display_name, 0, 0, 0))
         self.conn.commit()
+        xd = self.c.execute('SELECT * FROM userconfig WHERE (guild_id=? AND user_id=?)', (member.guild.id, member.id))
+        xd = xd.fetchall()
+        if xd == []:
+            self.c.execute('INSERT INTO userconfig VALUES (?, ?, ?, ?, ?, ?)', (member.guild.id, member.id, None, None, False, None))
+            self.conn.commit()
 
-    async def on_server_join(self, server):
-        a = self.c.execute('SELECT * FROM servers WHERE id=?', (server.id,))
+
+    async def on_guild_join(self, guild):
+        a = self.c.execute('SELECT * FROM servers WHERE id=?', (guild.id,))
         a = a.fetchall()
         
         print(a)
         if a == []:
-            self.c.execute('INSERT INTO servers VALUES (?, ?, ?, ?, ?)', (server.id, None, None, None, None))
+            self.c.execute('INSERT INTO servers VALUES (?, ?, ?, ?, ?, ?)', (guild.id, None, None, None, None, '?,!'))
             self.conn.commit()
-        b = self.c.execute('SELECT * FROM logging WHERE server=?', (server.id,))
+        b = self.c.execute('SELECT * FROM logging WHERE server=?', (guild.id,))
         b = b.fetchall()
         if b == []:
-            self.c.execute('INSERT INTO logging VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', (server.id, 1, 1, 1, 1, 1, 1, 1, None))
+            self.c.execute('INSERT INTO logging VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', (guild.id, 1, 1, 1, 1, 1, 1, 1, None))
             self.conn.commit()
-        for member in server.members:
-            a = self.c.execute('SELECT * FROM users WHERE (id=? AND server=?)', (member.id, member.server.id))
+        for member in guild.members:
+            a = self.c.execute('SELECT * FROM users WHERE (id=? AND server=?)', (member.id, member.guild.id))
             a = a.fetchall()
             if a != []:
                 continue
-            roles = ','.join([x.id for x in member.roles if (x.name != "@everyone" and x.id != "232206741339766784")])
-            self.c.execute("INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (roles, member.server.id, None, member.id, member.display_name, 0, 0, 0))
+            roles = ','.join([x.id for x in member.roles if x.name != "@everyone"])
+            self.c.execute("INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (roles, member.guild.id, None, member.id, member.display_name, 0, 0, 0))
             self.conn.commit()
 
 
 
     async def on_message(self, message):
-        if (random.randint(1, 10000) == 1 and message.server.id == "207943928018632705"):
-            legendaryRole = discord.utils.get(message.server.roles, name='Legendary')
-            await self.bot.add_roles(message.author, legendaryRole)
-            await self.bot.send_message(message.channel, "{} just received a legendary item: **{}**".format(message.author.mention, random.choice(legendaries)))
-        self.fix_postcount(message)
-        if message.content[:1] in ["?", "!", "§"]:
+        print(random.randint(1, 10000))
+        if (random.randint(1, 10000) == 1 and message.guild.id == 207943928018632705):
+            legendaryRole = discord.utils.get(message.guild.roles, name='Legendary')
+            await message.author.add_roles(legendaryRole)
+            await message.channel.send("{} just received a legendary item: **{}**".format(message.author.mention, random.choice(legendaries)))
+        if (random.randint(1, 5000) == 1 and message.channel.id == 251064728795873281):
+            quality = random.randint(1, 6)
+            legendaryRole = discord.utils.get(message.guild.roles, name='Unique')
+            await message.author.add_roles(legendaryRole)
+            await message.channel.send("{} You found a unique, exile. It's a **{}l {}**".format(message.author.mention, quality, random.choice(uniques)))
+        if message.guild is None:
             return
-        if message.author.id == "235148962103951360":
-            return
-        if message.channel.is_private:
-            return
+        self.fix_postcount(message)        
         if message.content == "":
-            return
-        log(message)
-            
-        self.c.execute("INSERT INTO messages VALUES (?, ?, ?, ?, ?, ?, ?)", (message.timestamp.timestamp(), message.timestamp.strftime(dt_format), message.clean_content, message.id, message.author.id, message.channel.id, message.server.id))
+            return            
+        self.c.execute("INSERT INTO messages VALUES (?, ?, ?, ?, ?, ?, ?)", (message.created_at.timestamp(), message.created_at.strftime(dt_format), message.clean_content, message.id, message.author.id, message.channel.id, message.guild.id))
         self.conn.commit()
-        if "carl" in message.content.lower():
-            insensitive_carl = re.compile(re.escape('carl'), re.IGNORECASE)
-            postme = insensitive_carl.sub('**__Carl__**', message.clean_content)
-            await self.bot.send_message(discord.Object(id="213720502219440128"), "**{}** in **<#{}>**:\n{}".format(message.author.display_name, message.channel.id, postme))
+
 
 def setup(bot):
     bot.add_cog(StatTrak(bot))

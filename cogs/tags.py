@@ -4,21 +4,23 @@ import math
 import discord
 import datetime
 import sqlite3
+import random
+import aiohttp
 
 from fuzzywuzzy import fuzz
 from discord.ext import commands
 from cogs.utils.paginator import Pages
 from cogs.utils import config, checks, formats
-from cogs.mod import *
 
 
 
 class Tags:
     def __init__(self, bot):
         self.bot = bot
-        self.modconfig = config.Config('mod.json', loop=bot.loop, object_hook=object_hook, encoder=RaidModeEncoder)
         self.conn = sqlite3.connect('database.db')
         self.c = self.conn.cursor()
+        self.variable_regex = re.compile(r'(?:\$(\d)=?((?:\w|%|{|.*?}|".*?")*)?)')
+        self.random_regex = re.compile("(\{\{(.*?)\}\})")
         self.c.execute('''CREATE TABLE IF NOT EXISTS tags
              (name text, content text, server text, creation real, updated real, uses real, author text)''')
 
@@ -27,71 +29,89 @@ class Tags:
         return content.replace('@everyone', '@\u200beveryone').replace('@here', '@\u200bhere')
     
 
-    def is_plonked(self, server, member):
-        db = self.modconfig.get('plonks', {}).get(server.id, [])
-        bypass_ignore = member.server_permissions.manage_server
-        if not bypass_ignore and member.id in db:
-            return True
-        return False
+     
 
-    async def on_message(self, message):
-        if message.author.id == self.bot.client_id:
-            return
-        if message.channel.is_private:
-            return
-        if message.author.id == "290321689286279168":
-            return
-        if message.attachments:
-            return
-        if message.content == "":
-            return
-        if self.is_plonked(message.server, message.author):
-            return False
 
-        command = message.content.split()
-        command = command[0]
-        if command[:1] not in ["§", "?", "!", "computer, "]:
-            return
-        command = command[1:]
-        command = command.lower()
-        if message.content[1:4] == "tag":
-            return
-        if command in self.bot.commands:
-            return
-        name = message.content[1:]
+    @commands.group(invoke_without_command=True)
+    async def tag(self, ctx, name : str, *choices: str):
+        choices = [x for x in choices if not re.match("<@!?\d*>", x)]
+        print(f"choices = {choices}")
         lookup = name.lower()
-        server = message.server
-        
-        tag = self.c.execute('SELECT content FROM tags WHERE (name=? AND server=?)', (lookup, server.id))
-        tag = tag.fetchall()
-        if tag == []:
-            return
-        await self.bot.send_message(message.channel, tag[0][0])
-        self.c.execute('UPDATE tags SET uses = uses + 1 WHERE (name=? AND server=?)', (lookup, server.id))
-        self.conn.commit()
-
-       
-
-
-    @commands.group(pass_context=True, invoke_without_command=True)
-    async def tag(self, ctx, *, name : str):        
-        lookup = name.lower()
-        a = self.c.execute('SELECT * FROM tags WHERE (name=? AND server=?)', (lookup, ctx.message.server.id))
+        a = self.c.execute('SELECT * FROM tags WHERE (name=? AND server=?)', (lookup, str(ctx.guild.id)))
         a = a.fetchall()
-        if a == []:
-            await self.bot.say("No tag named {} could be found.".format(lookup.replace("@", "@\u200b")))
+        ls = name.split()
+        if a == []:            
             return
 
         tag = a[0][1]
 
+        
+        var_results = re.findall(self.variable_regex, tag)
+        if var_results != []:
+            def cback(matchobj):
+                group_one_number = int(matchobj.group(1))
+                if group_one_number <= len(choices):
+                    return choices[group_one_number-1]
+                else:
+                    if matchobj.group(2) != "":
+                        if matchobj.group(2).startswith('"') and matchobj.group(2).endswith('"'):
+                            return matchobj.group(2)[1:-1]
+                        return matchobj.group(2)
+                    else:
+                        return ""
+            tag = re.sub(self.variable_regex, cback, tag)
 
-        self.c.execute('UPDATE tags SET uses = uses + 1 WHERE (name=? AND server=?)', (lookup, ctx.message.server.id))
+        if r"%user" in tag:
+            user = ctx.message.mentions[0] if ctx.message.mentions != [] else ctx.message.author
+            tag = tag.replace(r"%user", user.display_name)
+        if r"%author" in tag:
+            tag = tag.replace(r"%author", ctx.message.author.display_name)
+        if r"%channel" in tag:
+            channel = ctx.message.channel_mentions[0] if ctx.message.channel_mentions != [] else ctx.message.channel
+            tag = tag.replace(r"%channel", channel.name)
+        if r"%server" in tag:
+            tag = tag.replace(r"%server", ctx.guild.name)
+        if r"%nauthor" in tag:
+            tag = tag.replace(r"%nauthor", ctx.message.author.name)
+        if r"%nuser" in tag:
+            user = ctx.message.mentions[0] if ctx.message.mentions != [] else ctx.message.author
+            tag = tag.replace(r"%nuser", user.name)
+        if r"%mention" in tag:
+            if ctx.message.mentions:
+                user = ctx.message.mentions[0] if ctx.message.mentions != [] else ctx.message.author
+                tag = tag.replace(r"%mention", user.name)
+            else:
+                tag = tag.replace(r"%mention", "")
+        if r"%nmention" in tag:
+            if ctx.message.mentions:
+                user = ctx.message.mentions[0] if ctx.message.mentions != [] else ctx.message.author
+                tag = tag.replace(r"%nmention", user.name)
+            else:
+                tag = tag.replace(r"%nmention", "")
+
+        
+
+        
+        results = re.findall(self.random_regex, tag)
+        if results != []:
+            def callback(matchobj):
+                print(matchobj.group(2))
+                print([s.strip('{} ') for s in matchobj.group(2).split(',')])
+                #return random.choice([s.strip('{} ') for s in matchobj.group(2).split(',')])
+                return random.choice(matchobj.group(2).split(',')).lstrip()
+            tag = re.sub(self.random_regex, callback, tag)
+
+
+       
+        tag = self.clean_tag_content(tag)
+
+        self.c.execute('UPDATE tags SET uses = uses + 1 WHERE (name=? AND server=?)', (lookup, str(ctx.guild.id)))
         self.conn.commit()
-        await self.bot.say(tag)
+        await ctx.send(tag)
     @tag.error
     async def tag_error(self, error, ctx):
         if isinstance(error, commands.MissingRequiredArgument):
-            await self.bot.say('You need to pass in a tag name.')
+            await ctx.send('You need to pass in a tag name.')
     
     def verify_lookup(self, lookup):
         if '@everyone' in lookup or '@here' in lookup:
@@ -102,7 +122,43 @@ class Tags:
         
         if len(lookup) > 50:
             raise RuntimeError('Tag name is a maximum of 50 characters.')
-    @tag.command(pass_context=True, aliases=['add', '+'])
+
+
+    @tag.command(aliases=['++'])
+    @checks.admin_or_permissions(manage_server=True)
+    async def procreate(self, ctx, name : str, *, content : str):
+        if ctx.message.mentions:
+            return
+        match = re.findall("https:\/\/pastebin.com\/(?:raw\/)?(.*)", content)
+        print(match)
+        if not match:
+            await ctx.send("You need to pass in a pastebin link")
+            return
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f'https://pastebin.com/raw/{match[0]}') as res:                    
+                content = await res.text()
+                print(content)
+        content = self.clean_tag_content(content)
+        lookup = name.lower().strip()
+        try:
+            self.verify_lookup(lookup)
+        except RuntimeError as e:
+            return await ctx.send(e)
+        a = self.c.execute('SELECT * FROM tags WHERE (name=? AND server=?)', (lookup, str(ctx.guild.id)))
+        a = a.fetchall()
+        word = "created"
+        if a != []:
+            word = "updated"
+            self.c.execute('UPDATE tags SET content=?, updated=? WHERE (name=? AND server=?)', (content, datetime.datetime.utcnow().timestamp(), lookup, str(ctx.guild.id)))
+            self.conn.commit()
+            await ctx.send(f'Tag "{name}" successfully {word}.')
+        else:
+            self.c.execute("INSERT INTO tags VALUES (?, ?, ?, ?, ?, ?, ?)", (lookup, content, str(ctx.guild.id), datetime.datetime.utcnow().timestamp(), datetime.datetime.utcnow().timestamp(), 0, ctx.message.author.id))
+            self.conn.commit()
+            await ctx.send(f'Tag "{name}" successfully {word}.')
+
+
+    @tag.command(aliases=['add', '+'])
     async def create(self, ctx, name : str, *, content : str):
         if ctx.message.mentions:
             return
@@ -111,60 +167,78 @@ class Tags:
         try:
             self.verify_lookup(lookup)
         except RuntimeError as e:
-            return await self.bot.say(e)
-        location = self.get_database_location(ctx.message)
-        db = self.config.get(location, {})
-        a = self.c.execute('SELECT * FROM tags WHERE (name=? AND server=?)', (lookup, ctx.message.server.id))
+            return await ctx.send(e)
+        a = self.c.execute('SELECT * FROM tags WHERE (name=? AND server=?)', (lookup, str(ctx.guild.id)))
         a = a.fetchall()
         if a != []:
-            await self.bot.say("Tag already exists. **__r__**eplace, **__c__**ancel or **__a__**dd to? (r/c/a)")
-            msg = await self.bot.wait_for_message(author=ctx.message.author, check=lambda m: m.content.lower() in ['r', 'c', 'a'])
+            await ctx.send("Tag already exists. **__r__**eplace, **__c__**ancel or **__a__**dd to? (r/c/a)")
+            msg = await self.bot.wait_for('message', check=lambda m: m.content.lower() in ['r', 'c', 'a'] and m.author == ctx.message.author)
             if msg.content.lower() == "r":
-                self.c.execute('UPDATE tags SET content=? WHERE (name=? AND server=?)', (content, lookup, ctx.message.server.id))
+                self.c.execute('UPDATE tags SET content=?, updated=? WHERE (name=? AND server=?)', (content, datetime.datetime.utcnow().timestamp(), lookup, str(ctx.guild.id)))
                 self.conn.commit()
-                await self.bot.say('Tag "{}" successfully updated.'.format(name))
+                await ctx.send('Tag "{}" updated.'.format(name))
                 return
             if msg.content.lower() == "c":
-                await self.bot.say("Tag unchanged.")
+                await ctx.send("Tag unchanged.")
                 return
             if msg.content.lower() == "a":
                 print(a[0][1])
                 appended_tag = a[0][1] + "\n{}".format(content)
                 if len(appended_tag) >= 2000:
-                    return await self.bot.say("That would make the tag too long")
-                self.c.execute('UPDATE tags SET content=? WHERE (name=? AND server=?)', (appended_tag, lookup, ctx.message.server.id))
-                self.c.execute('UPDATE tags SET updated=? WHERE (name=? AND server=?)', (datetime.datetime.utcnow().timestamp(), lookup, ctx.message.server.id))
+                    return await ctx.send("That would make the tag too long")
+                self.c.execute('UPDATE tags SET content=?, updated=? WHERE (name=? AND server=?)', (appended_tag, datetime.datetime.utcnow(), lookup, str(ctx.guild.id)))
                 self.conn.commit()
-                await self.bot.say('Tag "{}" successfully appended.'.format(name))
+                await ctx.send('Tag "{}" successfully appended.'.format(name))
                 return
             else:
                 return
-        self.c.execute("INSERT INTO tags VALUES (?, ?, ?, ?, ?, ?, ?)", (lookup, content, ctx.message.server.id, datetime.datetime.utcnow().timestamp(), datetime.datetime.utcnow().timestamp(), 0, ctx.message.author.id))
+        self.c.execute("INSERT INTO tags VALUES (?, ?, ?, ?, ?, ?, ?)", (lookup, content, str(ctx.guild.id), datetime.datetime.utcnow().timestamp(), datetime.datetime.utcnow().timestamp(), 0, ctx.message.author.id))
         self.conn.commit()
-        await self.bot.say('Tag "{}" successfully created.'.format(name))
+        await ctx.send('Tag "{}" successfully created.'.format(name))
+
+
+
+    @tag.command(aliases=['update', '&'])
+    async def edit(self, ctx, name : str, *, content : str):
+        if ctx.message.mentions:
+            return
+        content = self.clean_tag_content(content)
+        lookup = name.lower().strip()
+        try:
+            self.verify_lookup(lookup)
+        except RuntimeError as e:
+            return await ctx.send(e)
+        a = self.c.execute('SELECT * FROM tags WHERE (name=? AND server=?)', (lookup, str(ctx.guild.id)))
+        a = a.fetchall()
+        if a != []:
+            self.c.execute('UPDATE tags SET content=?, updated=? WHERE (name=? AND server=?)', (content, datetime.datetime.utcnow().timestamp(), lookup, str(ctx.guild.id)))
+            self.conn.commit()
+            await ctx.send('Tag "{}" edited.'.format(name))
+        else:
+            await ctx.send("That tag doesn't seem to exist.")
 
     @create.error
     async def create_error(self, error, ctx):
         if isinstance(error, commands.MissingRequiredArgument):
-            await self.bot.say('Tag ' + str(error))
+            await ctx.send('Tag ' + str(error))
 
-    @tag.command(pass_context=True, name="append", aliases=['+='])
+    @tag.command(name="append", aliases=['+='])
     async def _append(self, ctx, name : str, *, content : str):
         content = self.clean_tag_content(content)
         lookup = name.lower().strip()
-        a = self.c.execute('SELECT * FROM tags WHERE (name=? AND server=?)', (lookup, ctx.message.server.id))
+        a = self.c.execute('SELECT * FROM tags WHERE (name=? AND server=?)', (lookup, str(ctx.guild.id)))
         a = a.fetchall()
         if a == []:
-            return await self.bot.say("Can't append non-existent tags")
+            return await ctx.send("Can't append non-existent tags")
         try:
             appended_tag = a[0][1] + "\n{}".format(content)
         except Exception as e:
-            await self.bot.say(e)
+            await ctx.send(e)
         if len(appended_tag) >= 2000:
-            return await self.bot.say("That would make the tag too long")
-        self.c.execute('UPDATE tags SET content=?, updated=? WHERE (name=? AND server=?)', (appended_tag, datetime.datetime.utcnow().timestamp(), lookup, ctx.message.server.id))
+            return await ctx.send("That would make the tag too long")
+        self.c.execute('UPDATE tags SET content=?, updated=? WHERE (name=? AND server=?)', (appended_tag, datetime.datetime.utcnow().timestamp(), lookup, str(ctx.guild.id)))
         self.conn.commit()
-        await self.bot.say('Tag "{}" successfully appended.'.format(name))
+        await ctx.send('Tag "{}" successfully appended.'.format(name))
         
 
 
@@ -181,9 +255,9 @@ class Tags:
             emoji += 1
 
 
-    @tag.command(pass_context=True)
+    @tag.command()
     async def stats(self, ctx):
-        server = ctx.message.server
+        server = ctx.guild
         e = discord.Embed(title=None)
         
         
@@ -199,36 +273,36 @@ class Tags:
         try:            
             e.add_field(name=server.name, value='%s tags\n%s uses' % (a, int(b)))
         except TypeError:
-            return await self.bot.say("This server doesn't seem to have any tags")
+            return await ctx.send("This server doesn't seem to have any tags")
         fmt = '{} ({} uses)'
-        for emoji, tag in self.top_three_tags(ctx.message.server):
+        for emoji, tag in self.top_three_tags(ctx.guild):
             e.add_field(name=emoji + ' Server Tag', value=fmt.format(tag[0], int(tag[5])))
         
-        await self.bot.say(embed=e)
+        await ctx.send(embed=e)
 
 
 
-    @tag.command(pass_context=True, aliases=['delete', '-', 'del'], no_pm=True)
+    @tag.command(aliases=['delete', '-', 'del'], no_pm=True)
     async def remove(self, ctx, *, name : str):
         lookup = name.lower()
-        server = ctx.message.server
+        server = ctx.guild
         tag = self.c.execute('SELECT * FROM tags WHERE (name=? AND server=?)', (lookup, server.id))
         if tag.fetchall() == []:
-            return await self.bot.say("Tag not found")
+            return await ctx.send("Tag not found")
         
 
         msg = 'Tag successfully removed.'
         self.c.execute('DELETE FROM tags WHERE (name=? AND server=?)', (lookup, server.id))
         self.conn.commit()
-        await self.bot.say(msg)
+        await ctx.send(msg)
 
-    @tag.command(pass_context=True, aliases=['owner'])
+    @tag.command(aliases=['owner'])
     async def info(self, ctx, *, name : str):
         lookup = name.lower()
-        server = ctx.message.server
-        a = self.c.execute('SELECT * FROM tags WHERE (server=? AND name=?)', (ctx.message.server.id, lookup))
+        server = ctx.guild
+        a = self.c.execute('SELECT * FROM tags WHERE (server=? AND name=?)', (str(ctx.guild.id), lookup))
         name, _, _, created, updated, uses, author = a.fetchall()[0]
-        r = self.c.execute('SELECT uses FROM tags WHERE server=?', (ctx.message.server.id,))
+        r = self.c.execute('SELECT uses FROM tags WHERE server=?', (str(ctx.guild.id),))
         rc = r.fetchall()
         rank = sorted([x[0] for x in rc], reverse=True).index(uses)+1
 
@@ -239,19 +313,18 @@ class Tags:
         e.add_field(name='Creation date', value=datetime.datetime.fromtimestamp(created).strftime("%b %d, %Y"))
         e.add_field(name='Last update', value=datetime.datetime.fromtimestamp(updated).strftime("%b %d, %Y"))
 
-        await self.bot.say(embed=e)
+        await ctx.send(embed=e)
 
 
     @info.error
     async def info_error(self, error, ctx):
         if isinstance(error, commands.MissingRequiredArgument):
-            await self.bot.say('Missing tag name to get info of.')
+            await ctx.send('Missing tag name to get info of.')
         
-    @tag.command(pass_context=True)
+    @tag.command()
     async def raw(self, ctx, *, name : str):
         lookup = name.lower()
-        server = ctx.message.server
-        tag = self.c.execute('SELECT * FROM tags WHERE (name=? AND server=?)', (lookup, server.id))
+        tag = self.c.execute('SELECT * FROM tags WHERE (name=? AND server=?)', (lookup, str(ctx.guild.id)))
         tag = tag.fetchone()
 
 
@@ -263,19 +336,19 @@ class Tags:
             return transformations.get(re.escape(obj.group(0)), '')
 
         pattern = re.compile('|'.join(transformations.keys()))
-        await self.bot.say(pattern.sub(replace, tag[1]))
+        await ctx.send(pattern.sub(replace, tag[1]))
 
-    @tag.command(name='mine', pass_context=True)
+    @tag.command(name='mine')
     async def _mine(self, ctx, *, member : discord.Member = None):
         user = ctx.message.author if member is None else member
-        tags = self.c.execute('SELECT name FROM tags WHERE (server=? AND author=?) ORDER BY name ASC', (ctx.message.server.id, user.id))
+        tags = self.c.execute('SELECT name FROM tags WHERE (server=? AND author=?) ORDER BY name ASC', (str(ctx.guild.id), user.id))
         tags = tags.fetchall()
         tags = [x[0] for x in tags]
         if tags:
             try:
                 if sum(len(t) for t in tags) < 1900:
                     d = ', '.join(tags)
-                    await self.bot.send_message(ctx.message.author, d)
+                    await ctx.author.send(d)
                 else:
                     tempmessage = []
                     finalmessage = []
@@ -289,23 +362,23 @@ class Tags:
                     finalmessage.append(', '.join(tempmessage))
                     for x in finalmessage:
                         if x != "":
-                            await self.bot.send_message(ctx.message.author, x)
+                            await ctx.author.send(x)
             except Exception as e:
-                await self.bot.say(e)
+                await ctx.send(e)
         else:
-            await self.bot.say('This user has no tags.')
+            await ctx.send('This user has no tags.')
 
 
-    @tag.command(name='list', pass_context=True, no_pm=True)
+    @tag.command(name='list', no_pm=True)
     async def _list(self, ctx):
-        tags = self.c.execute('SELECT name FROM tags WHERE (server=?) ORDER BY name ASC', (ctx.message.server.id,))
+        tags = self.c.execute('SELECT name FROM tags WHERE (server=? AND LENGTH(name) > 2) ORDER BY name ASC', (str(ctx.guild.id),))
         tags = tags.fetchall()
         tags = [x[0] for x in tags]
         if tags:
             try:
                 if sum(len(t) for t in tags) < 1900:
                     d = ', '.join(tags)
-                    await self.bot.send_message(ctx.message.author, d)
+                    await ctx.author.send(d)
                 else:
                     tempmessage = []
                     finalmessage = []
@@ -319,22 +392,22 @@ class Tags:
                     finalmessage.append(', '.join(tempmessage))
                     for x in finalmessage:
                         if x != "":
-                            await self.bot.send_message(ctx.message.author, x)
+                            await ctx.author.send(x)
             except Exception as e:
-                await self.bot.say(e)
+                await ctx.send(e)
         else:
-            await self.bot.say('This server has no tags.')
+            await ctx.send('This server has no tags.')
     
-    @commands.command(name='taglist', aliases=['commands', 'tags'], pass_context=True, no_pm=True)
+    @commands.command(name='taglist', aliases=['commands', 'tags'], no_pm=True)
     async def tag_list(self, ctx):
-        tags = self.c.execute('SELECT name FROM tags WHERE (server=?) ORDER BY name ASC', (ctx.message.server.id,))
+        tags = self.c.execute('SELECT name FROM tags WHERE server=? ORDER BY name ASC', (str(ctx.guild.id),))
         tags = tags.fetchall()
         tags = [x[0] for x in tags]
         if tags:
             try:
                 if sum(len(t) for t in tags) < 1900:
                     d = ', '.join(tags)
-                    await self.bot.send_message(ctx.message.author, d)
+                    await ctx.author.send(d)
                 else:
                     tempmessage = []
                     finalmessage = []
@@ -348,71 +421,25 @@ class Tags:
                     finalmessage.append(', '.join(tempmessage))
                     for x in finalmessage:
                         if x != "":
-                            await self.bot.send_message(ctx.message.author, x)
+                            await ctx.author.send(x)
             except Exception as e:
-                await self.bot.say(e)
+                await ctx.send(e)
         else:
-            await self.bot.say('This server has no tags.')
+            await ctx.send('This server has no tags.')
 
 
     
-    @tag.command(pass_context=True, no_pm=True)
-    @checks.is_owner()
-    async def purge(self, ctx, member : discord.Member):
-        tags = self.c.execute('SELECT * FROM tags WHERE author=?', (member.id,))
-        tags = tags.fetchall()
-        
-        if not ctx.message.channel.permissions_for(ctx.message.server.me).add_reactions:
-            return await self.bot.say('Bot cannot add reactions.')
-
-        if not tags:
-            return await self.bot.say('This user has no tags.')
-
-        msg = await self.bot.say('This will delete %s tags are you sure? **This action cannot be reversed**.\n\n' \
-'React with either \N{WHITE HEAVY CHECK MARK} to confirm or \N{CROSS MARK} to deny.' % len(tags))
-        
-        cancel = False
-        author_id = ctx.message.author.id
-        def check(reaction, user):
-            nonlocal cancel
-            if user.id != author_id:
-                return False
-
-            if reaction.emoji == '\N{WHITE HEAVY CHECK MARK}':
-                return True
-            elif reaction.emoji == '\N{CROSS MARK}':
-                cancel = True
-                return True
-            return False
-
-        for emoji in ('\N{WHITE HEAVY CHECK MARK}', '\N{CROSS MARK}'):
-            await self.bot.add_reaction(msg, emoji)
-
-        react = await self.bot.wait_for_reaction(message=msg, check=check, timeout=60.0)
-        if react is None or cancel:
-            await self.bot.delete_message(msg)
-            return await self.bot.say('Cancelling.')
-
-        self.c.execute('DELETE FROM tags WHERE (author=? AND server=?)', (author_id, ctx.message.server.id))
-        self.conn.commit()
-        await self.bot.delete_message(msg)
-        await self.bot.say('Successfully removed all %s tags that belong to %s' % (len(tags), member.display_name))
-
-
-
-
-
-    @tag.command(pass_context=True)
+    @tag.command()
     async def search(self, ctx, *, query : str):
         """Searches for a tag.
         The query must be at least 2 characters.
         """
 
-        server = ctx.message.server
+        server = ctx.guild
         query = query.lower()
         if len(query) < 2:
-            return await self.bot.say('The query length must be at least two characters.')
-        tags = self.c.execute('SELECT name FROM tags WHERE server=? ORDER BY uses DESC', (server.id,))
+            return await ctx.send('The query length must be at least two characters.')
+        tags = self.c.execute('SELECT name FROM tags WHERE (server=?  AND LENGTH(name) > 2) ORDER BY uses DESC', (server.id,))
         tags = tags.fetchall()
         
         results = [x[0] for x in tags]
@@ -442,38 +469,65 @@ class Tags:
                     tempmessage = ""
                     xd = 0
             final_list.append(tempmessage)
+            if len(list_of_returns) == 0:
+                await ctx.send("No tags found.")
+                return 
 
             em = discord.Embed(title="Search results:", description=final_list[0], colour=0x738bd7)
             em.set_author(name=ctx.message.author.name, icon_url=ctx.message.author.avatar_url, url=ctx.message.author.avatar_url)
             em.set_footer(text="{} results. (page {}/{})".format(i-1, 1, math.ceil((i-1)/15)))
-            initial_message = await self.bot.say(embed=em)
-            msg = await self.bot.wait_for_message(author=ctx.message.author, check=lambda m: m.content.isdigit(), timeout=30.0)
-            listoflines = bad_var.split('\n')
-            if msg is not None:
-                tag_name = listoflines[int(msg.content)-1]
-            else:
-                return
-            server = ctx.message.server
-            tag_to_send = self.c.execute('SELECT content FROM tags WHERE (name=? AND server=?)', (tag_name, server.id))
-            t = tag_to_send.fetchone()
-            t = t[0]
-            await self.bot.say(t)
+            initial_message = await ctx.send(embed=em)
+            def check(mesg):
+                if mesg.content.isdigit():
+                    return True
+                elif mesg.content.startswith("p"):
+                    return True
+                else:
+                    return False
+            for p in range(5):
+                msg = await self.bot.wait_for('message', check=lambda x: x.author == ctx.message.author, timeout=30.0)
+                #if the message is a number, match it with the associated tag
+                if msg.content.isdigit():
+                    listoflines = bad_var.split('\n')
+                    tag_name = listoflines[int(msg.content)-1]
+                    tag_to_send = self.c.execute('SELECT content FROM tags WHERE (name=? AND server=?)', (tag_name, str(ctx.guild.id)))
+                    t = tag_to_send.fetchone()
+                    t = t[0]
+                    await ctx.send(t)
+                    
+                    # await self.bot.send_message(message.channel, self.taglist[listoflines[int(msg.content)-1]])
+                    # await self.bot.delete_message(initial_message)
+                    return
+                #this is for pages
+                elif msg.content.startswith("p"):
+                   # try:
+                    page_number = int(msg.content[1:])
+                    em2 = discord.Embed(title="Search results:", description=final_list[page_number-1], colour=0xffffff)
+                    em2.set_author(name=ctx.message.author.name, icon_url=ctx.message.author.avatar_url, url=ctx.message.author.avatar_url)
+                    em2.set_footer(text="{} results. (page {}/{})".format(i-1, page_number, math.ceil((i-1)/15)))
+                    await self.bot.edit_message(initial_message, embed=em2)
+                    # except Exception as e:
+                    #     print(e)
+                    #     return
+                else:
+                    return
         else:
-            await self.bot.say('No tags found.')
+            await ctx.send('No tags found.')
 
 
-    @commands.command(pass_context=True, name="search")
+    @commands.command(name="search")
     async def _search(self, ctx, *, query : str):
         """Searches for a tag.
         The query must be at least 2 characters.
         """
 
-        server = ctx.message.server
+        server = ctx.guild
         query = query.lower()
         if len(query) < 2:
-            return await self.bot.say('The query length must be at least two characters.')
+            await ctx.send('The query length must be at least two characters.')
+            return
 
-        tags = self.c.execute('SELECT name FROM tags WHERE server=? ORDER BY uses DESC', (server.id,))
+        tags = self.c.execute('SELECT name FROM tags WHERE (server=?  AND LENGTH(name) > 2) ORDER BY uses DESC', (server.id,))
         tags = tags.fetchall()
         
         results = [x[0] for x in tags]
@@ -503,29 +557,64 @@ class Tags:
                     tempmessage = ""
                     xd = 0
             final_list.append(tempmessage)
-
+            if len(list_of_returns) == 0:
+                return await ctx.send("No tags found.")
             em = discord.Embed(title="Search results:", description=final_list[0], colour=0x738bd7)
             em.set_author(name=ctx.message.author.name, icon_url=ctx.message.author.avatar_url, url=ctx.message.author.avatar_url)
             em.set_footer(text="{} results. (page {}/{})".format(i-1, 1, math.ceil((i-1)/15)))
-            initial_message = await self.bot.say(embed=em)
-            msg = await self.bot.wait_for_message(author=ctx.message.author, check=lambda m: m.content.isdigit(), timeout=30.0)
-            listoflines = bad_var.split('\n')
-            if msg is not None:
-                tag_name = listoflines[int(msg.content)-1]
-            else:
-                return
-            server = ctx.message.server
-            tag_to_send = self.c.execute('SELECT content FROM tags WHERE (name=? AND server=?)', (tag_name, server.id))
-            t = tag_to_send.fetchone()
-            t = t[0]
-            await self.bot.say(t)
+            initial_message = await ctx.send(embed=em)
+            def check(mesg):
+                if mesg.content.isdigit():
+                    return True
+                elif mesg.content.startswith("p"):
+                    return True
+                else:
+                    return False
+            for p in range(5):
+                msg = await self.bot.wait_for('message', check=lambda x: x.author == ctx.message.author, timeout=30.0)
+                #if the message is a number, match it with the associated tag
+                if msg.content.isdigit():
+                    listoflines = bad_var.split('\n')
+                    tag_name = listoflines[int(msg.content)-1]
+                    tag_to_send = self.c.execute('SELECT content FROM tags WHERE (name=? AND server=?)', (tag_name, str(ctx.guild.id)))
+                    t = tag_to_send.fetchone()
+                    t = t[0]
+                    await ctx.send(t)
+                    
+                    # await self.bot.send_message(message.channel, self.taglist[listoflines[int(msg.content)-1]])
+                    # await self.bot.delete_message(initial_message)
+                    return
+                #this is for pages
+                elif msg.content.startswith("p"):
+                   # try:
+                    page_number = int(msg.content[1:])
+                    em2 = discord.Embed(title="Search results:", description=final_list[page_number-1], colour=0xffffff)
+                    em2.set_author(name=ctx.message.author.name, icon_url=ctx.message.author.avatar_url, url=ctx.message.author.avatar_url)
+                    em2.set_footer(text="{} results. (page {}/{})".format(i-1, page_number, math.ceil((i-1)/15)))
+                    await self.bot.edit_message(initial_message, embed=em2)
+                    # except Exception as e:
+                    #     print(e)
+                    #     return
+                else:
+                    return
+            # msg = await self.bot.wait_for_message(author=ctx.message.author, check=lambda m: m.content.isdigit(), timeout=30.0)
+            # listoflines = bad_var.split('\n')
+            # if msg is not None:
+            #     tag_name = listoflines[int(msg.content)-1]
+            # else:
+            #     return
+            # server = ctx.guild
+            # tag_to_send = self.c.execute('SELECT content FROM tags WHERE (name=? AND server=?)', (tag_name, server.id))
+            # t = tag_to_send.fetchone()
+            # t = t[0]
+            # await ctx.send(t)
         else:
-            await self.bot.say('No tags found.')
+            await ctx.send('No tags found.')
 
     @search.error
     async def search_error(self, error, ctx):
         if isinstance(error, commands.MissingRequiredArgument):
-            await self.bot.say('Missing query to search for.')
+            await ctx.send('Missing query to search for.')
 
 
 

@@ -6,8 +6,10 @@ carlbot.txt
 database.db
 cogs/utils/
 cogs/admin.py
-cogs/permissions.py
+cogs/reminders.py
 cogs/convert.py
 cogs/mod.py
+cogs/nsfw.py
 cogs/__pycache__
 carlbot.log
+*.log

@@ -14,6 +14,16 @@ from collections import OrderedDict, deque, Counter
 from cogs.utils.formats import Plural
 
 
+ctx_tick = ("<:redtick:318044813444251649>", "<:greentick:318044721807360010>")
+
+class Prefix(commands.Converter):
+    async def convert(self, ctx, argument):
+        user_id = ctx.bot.user.id
+        if argument.startswith((f'<@{user_id}>', f'<@!{user_id}>')):
+            raise commands.BadArgument('That is a reserved prefix already in use.')
+        return argument
+
+
 def load_json(filename):
     with open(filename, encoding='utf-8') as infile:
         return json.load(infile)
@@ -50,46 +60,6 @@ def blizzard_time(dt):
         return '%s' % Plural(minute=minutes)
     return '%s' % Plural(second=seconds)
 
-class TimeParser:
-    def __init__(self, argument):
-        compiled = re.compile('(\\d+)(\\D+)')
-        self.original = argument
-        try:
-            self.seconds = int(argument)
-        except ValueError as e:
-            self.seconds = 0
-            match = compiled.match(argument)
-            if match is None or not match.group(0):
-                self.time = False
-                raise commands.BadArgument('Failed to parse time.') from e
-
-            matches = re.findall(compiled, argument)
-
-            for match1 in matches:
-                try:
-                    time = int(match1[0])
-                except:
-                    time = 0
-                unit = match1[1]
-
-                if unit in ["y", "year", "years", "yrs", "yr"]:
-                    self.seconds += time * 86400 * 365
-                elif unit in ["d", "day", "days"]:
-                    self.seconds += time * 86400
-                elif unit in ["h", "hour", "hours", "hr", "hrs"]:
-                    self.seconds += time * 3600
-                elif unit in ["m", "minute", "minutes"]:
-                    self.seconds += time * 60
-                elif unit in ["s", "sec", "seconds", "second"]:
-                    self.seconds += time
-
-
-        if self.seconds <= 0:
-            raise commands.BadArgument("<=0")
-
-        if self.seconds > 2.606e9: # 7 days
-            raise commands.BadArgument("Please try and keep it to this century.")
-
 
         
 
@@ -101,17 +71,100 @@ class Meta:
     
 
 
-    @commands.command(pass_context=True, name='define', aliases=['d'], no_pm=True)
+    
+    @commands.group(name='prefix', invoke_without_command=True)
+    async def prefix(self, ctx):
+        """Manages the server's custom prefixes.
+
+        If called without a subcommand, this will list the currently set
+        prefixes.
+        """
+
+        prefixes = self.bot.get_guild_prefixes(ctx.guild)
+
+        # we want to remove prefix #2, because it's the 2nd form of the mention
+        # and to the end user, this would end up making them confused why the
+        # mention is there twice
+        del prefixes[1]
+
+        e = discord.Embed(title='Prefixes', colour=discord.Colour.blurple())
+        e.set_footer(text=f'{len(prefixes)} prefixes')
+        e.description = '\n'.join(f'{index}. {elem}' for index, elem in enumerate(prefixes, 1))
+        await ctx.send(embed=e)
+    @prefix.command(name='add', ignore_extra=False)
+    @checks.admin_or_permissions(manage_server=True)
+    async def prefix_add(self, ctx, prefix: Prefix):
+        if "@everyone" in prefix:
+            return ctx.send("Fuck off.")
+        if "@here" in prefix:
+            return ctx.send("Fuck off.")
+        if "," in prefix:
+            return ctx.send("No commas, I'm lazy.") 
+
+        current_prefixes = self.bot.get_raw_guild_prefixes(ctx.guild.id)
+        current_prefixes.append(prefix)
+        try:
+            await self.bot.set_guild_prefixes(ctx.guild, current_prefixes)
+        except Exception as e:
+            await ctx.send(e)
+        else:
+            await ctx.send("{} added".format(prefix))
+
+    @prefix_add.error
+    async def prefix_add_error(self, ctx, error):
+        if isinstance(error, commands.TooManyArguments):
+            await ctx.send("You've given too many prefixes. Either quote it or only do it one by one.")
+
+    @prefix.command(name='remove', aliases=['delete'], ignore_extra=False)
+    @checks.admin_or_permissions(manage_server=True)
+    async def prefix_remove(self, ctx, prefix: Prefix):
+        """Removes a prefix from the list of custom prefixes.
+
+        This is the inverse of the 'prefix add' command. You can
+        use this to remove prefixes from the default set as well.
+
+        You must have Manage Server permission to use this command.
+        """
+
+        current_prefixes = self.bot.get_raw_guild_prefixes(ctx.guild.id)
+
+        try:
+            current_prefixes.remove(prefix)
+        except ValueError:
+            return await ctx.send('I do not have this prefix registered.')
+
+        try:
+            await self.bot.set_guild_prefixes(ctx.guild, current_prefixes)
+        except Exception as e:
+            await ctx.send('{}'.format(e))
+        else:
+            await ctx.send("{} removed".format(prefix))
+
+    @prefix.command(name='clear')
+    @checks.admin_or_permissions(manage_server=True)
+    async def prefix_clear(self, ctx):
+        """Removes all custom prefixes.
+
+        After this, the bot will listen to only mention prefixes.
+
+        You must have Manage Server permission to use this command.
+        """
+
+        await self.bot.set_guild_prefixes(ctx.guild, [])
+        await ctx.send('ALL prefixes removed, you need to mention me to set a new one.')
+
+
+    @commands.command(name='define', aliases=['d'], no_pm=True)
     async def _definitions(self, ctx, *, word : str):
         language = 'en'
-        user = ctx.message.author
+        user = ctx.author
         url = 'https://od-api.oxforddictionaries.com/api/v1/entries/en/' + word.lower()
         async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers = {'app_id': '3177862a', 'app_key': '5ce390244f464ed805eac645f5167322'}) as r:
+            async with session.get(url, headers = {'app_id': '3177862a', 'app_key': 'TOKEN'}) as r:
                 try:
                     jsonthing = await r.json()
                 except Exception as e:
-                    await self.bot.say('No definition found.\nError: {}: {}'.format(type(e).__name__, e))
+                    await ctx.send('No definition found.')
                     return
         actual_word = word.capitalize()
         pronounciation = jsonthing["results"][0]["lexicalEntries"][0]["pronunciations"][0]["phoneticSpelling"]
@@ -120,13 +173,16 @@ class Meta:
         try:
             x = jsonthing["results"][0]["lexicalEntries"]
         except Exception as e:
-            await self.bot.say('{}: {}'.format(type(e).__name__, e))
+            await ctx.send('{}: {}'.format(type(e).__name__, e))
         f = 0
         definitions = {}
         examples = {}
         for i in x:
             word_type = x[f]["lexicalCategory"]
-            d = x[f]["entries"][0]["senses"][0]["definitions"]
+            try:
+                d = x[f]["entries"][0]["senses"][0]["definitions"]
+            except:
+                continue
             d = ''.join(d)
             definition = "{}\n".format( ''.join(i["entries"][0]["senses"][0]["definitions"]))
             try:
@@ -156,28 +212,24 @@ class Meta:
             f += 1
         for box in definitions:
             e.add_field(name=box, value=definitions[box], inline=False)
-        if ctx.message.channel.is_default:
-            try:
-                destination = discord.utils.find(lambda m: "bot" in m.name, ctx.message.server.channels)
-                xd = await self.bot.send_message(destination, ctx.message.author.mention)
-                
-            except:
-                destination = ctx.message.channel
+        try:
+            destination = discord.utils.find(lambda m: "bot" in m.name, ctx.guild.channels)
+            xd = await destination.send(ctx.author.mention)
             
-        else:
+        except:
             destination = ctx.message.channel
-        await self.bot.send_message(destination, embed=e)
+        await ctx.send(embed=e)
 
 
     @commands.command()
-    async def charinfo(self, *, characters: str):
+    async def charinfo(self, ctx, *, characters: str):
         """Shows you information about a number of characters.
 
         Only up to 15 characters at a time.
         """
 
         if len(characters) > 15:
-            await self.bot.say('Too many characters ({}/15)'.format(len(characters)))
+            await ctx.send('Too many characters ({}/15)'.format(len(characters)))
             return
 
         fmt = '`\\U{0:>08}`: {1} - {2} \N{EM DASH} <http://www.fileformat.info/info/unicode/char/{0}>'
@@ -187,309 +239,87 @@ class Meta:
             name = unicodedata.name(c, 'Name not found.')
             return fmt.format(digit, name, c)
 
-        await self.bot.say('\n'.join(map(to_string, characters)))
+        await ctx.send('\n'.join(map(to_string, characters)))
 
-    @commands.command(pass_context=True, no_pm=True)
-    async def timer(self, ctx, time : TimeParser, *, message=''):
-        author = ctx.message.author
-        reminder = None
-        completed = None
-        message = message.replace('@everyone', '@\u200beveryone').replace('@here', '@\u200bhere')
-        message = message.replace('@', '@\u200b')
-
-        if not message:
-            reminder = 'Okay **{0.name}**, I\'ll remind you in {1}.'
-            completed = 'Time is up {0.mention}! You asked to be reminded about something {2}.'
-        else:
-            reminder = 'Okay **{0.name}**, I\'ll remind you about "{2}" in {1}.'
-            completed = 'Time is up {0.mention}! You asked to be reminded about "{1}" {2}.'
-
-        human_time = datetime.datetime.utcnow() - datetime.timedelta(seconds=time.seconds)
-        human_time = formats.human_timedelta(human_time)
-        await self.bot.say(reminder.format(author, human_time.replace(' ago', ''), message))
-        await asyncio.sleep(time.seconds)
-        await self.bot.say(completed.format(author, message, human_time))
 
     
-    @commands.group(pass_context=True, name="remindme", aliases=['rm'], invoke_without_command=True, no_pm=True)
-    async def remind_me(self, ctx, time : TimeParser, *, message=''):
-        author = ctx.message.author
-        reminder = None
-        completed = None
-        message = message.replace('@everyone', '@\u200beveryone').replace('@here', '@\u200bhere')
-        message = message.replace('@', '@\u200b')
-        if not time:
-            await self.bot.say("No time")
-        if not message:
-            reminder = 'Okay **{0.name}**, I\'ll remind you in {1}.'
-            completed = 'Time is up {0.mention}! You asked to be reminded about something {2}.'
-        else:
-            reminder = 'Okay **{0.name}**, I\'ll remind you about "{2}" in {1}'
-            completed = 'Time is up {0.mention}! You asked to be reminded about "{1}" {2}.'
-
-        human_time = datetime.datetime.utcnow() - datetime.timedelta(seconds=time.seconds)
-        human_time = formats.human_timedelta(human_time)
-        
-        try:
-            if len(self.remindme) == 0:
-                rm_index = 0
-            else:
-                rm_index = str(max(map(lambda x: int(x), self.remindme.keys())) + 1)
-            self.remindme[rm_index] = {"server" : ctx.message.server.id, "author" : author.id, "created" : datetime.datetime.utcnow().timestamp(), "message" : str(message), "timestamp" : (datetime.datetime.utcnow() + datetime.timedelta(seconds=time.seconds)).timestamp()}
-        except Exception as e:
-            print(e)
-            return
-        print(message)
-        write_json('remindme.json', self.remindme)
-        await self.bot.say(reminder.format(author, human_time.replace(' ago', '. ID: **{}**'.format(rm_index)), message))
-    
-
-    @remind_me.command(pass_context=True, aliases=['eu', 'na'])
-    async def invasion(self, ctx):
-        eu = False
-        if ctx.message.content.split()[1] == "eu":
-            eu = True
-        eu_anchor = datetime.datetime(year=2017, month=5, day=26, hour=22, minute=30, second=0, microsecond=0)
-        na_anchor = datetime.datetime(year=2017, month=5, day=26, hour=12, minute=0, second=0, microsecond=0)
-        eu_seconds_since = datetime.datetime.utcnow() - eu_anchor
-        eu_seconds_after_start = math.floor(eu_seconds_since.total_seconds() % 66600)
-        na_seconds_since = datetime.datetime.utcnow() - na_anchor
-        na_seconds_after_start = math.floor(na_seconds_since.total_seconds() % 66600)
-        if eu:
-            time_left = 66600 - eu_seconds_after_start
-        if not eu:
-            time_left = 66600 - na_seconds_after_start
-        time = TimeParser(time_left)
-        print(time.seconds)
-        author = ctx.message.author
-        if eu:
-            message = "EU invasion is up!"
-            reminder = 'Okay **{0.name}**, I\'ll notify you about the EU invasion in {1}'
-        else:
-            message = "NA invasion is up!"
-            reminder = 'Okay **{0.name}**, I\'ll notify you about the NA invasion in {1}'
-        
-
-        human_time = datetime.datetime.utcnow() - datetime.timedelta(seconds=time.seconds)
-        human_time = formats.human_timedelta(human_time)
-        
-        try:
-            if len(self.remindme) == 0:
-                rm_index = 0
-            else:
-                rm_index = str(max(map(lambda x: int(x), self.remindme.keys())) + 1)
-            self.remindme[rm_index] = {"server" : ctx.message.server.id, "author" : author.id, "created" : datetime.datetime.utcnow().timestamp(), "message" : str(message), "timestamp" : (datetime.datetime.utcnow() + datetime.timedelta(seconds=time.seconds)).timestamp()}
-        except Exception as e:
-            print(e)
-            return
-        print(message)
-        write_json('remindme.json', self.remindme)
-        await self.bot.say(reminder.format(author, human_time.replace(' ago', '. ID: **{}**'.format(rm_index))))
-
-
-    @remind_me.command(pass_context=True)
-    async def mine(self, ctx):
-        author = ctx.message.author
-        my_reminders = "```"
-        for k, v in self.remindme.items():
-            if v["author"] == author.id:
-                date = datetime.datetime.fromtimestamp(v["timestamp"]).strftime("%Y-%m-%d %H:%M")
-                my_reminders += "ID: {0:>3} Date: {2} Message: {1}\n".format(k, v["message"], date)
-        if len(my_reminders) == 3:
-            await self.bot.say("User has no reminders")
-        else:
-            await self.bot.say("{}```".format(my_reminders))
-            return
-    @remind_me.command(name='all', hidden=True)
-    @checks.is_owner()
-    async def _all(self):
-        my_reminders = "```"
-        for k, v in self.remindme.items():
-            date = datetime.datetime.fromtimestamp(v["timestamp"]).strftime("%Y-%m-%d %H:%M")
-            my_reminders += "ID: {0:>3} Date: {2} Message: {1}\n".format(k, v["message"], date)
-        if len(my_reminders) == 3:
-            await self.bot.say("There are no reminders")
-        else:
-            if len(my_reminders) < 2000:
-                await self.bot.say("{}```".format(my_reminders))
-                return
-            else:
-                url = "https://hastebin.com/documents"
-                async with aiohttp.ClientSession() as session:
-                    headers = {'content-type': 'text/plain', 'User-Agent': 'Mozilla/5.0 (Windows NT 6.3; Win64; x64)'}
-                    nicks = nicks.replace(", ", "\n")
-                    data = my_reminders.encode('utf-8')
-                    async with session.post(url=url, data=data, headers=headers) as r:
-                        print(r.status)
-                        haste_thing = await r.json(encoding="utf-8", loads=json.loads)
-                await self.bot.say("Too many reminders to display: https://hastebin.com/{}".format(haste_thing["key"]))
-    @remind_me.command(pass_context=True, name="clear")
-    async def _clear(self, ctx, kebab : int = None):
-        kebab = False if kebab is None else str(kebab)
-        if not kebab:
-            author = ctx.message.author
-            reminders = [k for k, v in self.remindme.items() if v["author"] == author.id]
-            msg = await self.bot.say('This will delete %s reminders are you sure? **This action cannot be reversed**.\n\n' \
-    'React with either \N{WHITE HEAVY CHECK MARK} to confirm or \N{CROSS MARK} to deny.' % len(reminders))
-
-            cancel = False
-            author_id = ctx.message.author.id
-            def check(reaction, user):
-                nonlocal cancel
-                if user.id != author_id:
-                    return False
-
-                if reaction.emoji == '\N{WHITE HEAVY CHECK MARK}':
-                    return True
-                elif reaction.emoji == '\N{CROSS MARK}':
-                    cancel = True
-                    return True
-                return False
-
-            for emoji in ('\N{WHITE HEAVY CHECK MARK}', '\N{CROSS MARK}'):
-                await self.bot.add_reaction(msg, emoji)
-
-            react = await self.bot.wait_for_reaction(message=msg, check=check, timeout=60.0)
-            if react is None or cancel:
-                await self.bot.delete_message(msg)
-                return await self.bot.say('Cancelling.')
-
-            self.remindme = { a:b for a,b in self.remindme.items() if a not in reminders }
-                
-
-            write_json('remindme.json', self.remindme)
-            await self.bot.delete_message(msg)
-            await self.bot.say('Successfully removed all %s reminders that belong to %s' % (len(reminders), author.name))
-
-        else:
-            try:
-                if self.remindme[kebab]["author"] == ctx.message.author.id:
-                    self.remindme = { a:b for a,b in self.remindme.items() if a!=kebab }
-                    write_json('remindme.json', self.remindme)
-                    await self.bot.say("Successfully removed reminder.")
-                else:
-                    await self.bot.say("That's not your reminder.")
-            except KeyError:
-                await self.bot.say("No reminder with that ID found.")
-
-    @commands.command(pass_context=True, aliases=["sub"], no_pm=True)
-    async def subscribe(self, ctx, rm_id : int):
-        rm_id = str(rm_id)
-        if rm_id not in self.remindme:
-            await self.bot.say("No reminder with that id.")
-            return
-        elif ctx.message.server.id != self.remindme[rm_id]["server"]:
-            await self.bot.say("That reminder was made in another server.")
-            return
-        else:
-            entry = self.remindme[rm_id]
-
-        a = datetime.datetime.fromtimestamp(float(entry["timestamp"]))
-        human_time = formats.flipped_human_timedelta(a)
-        rm_index = str(max(map(lambda x: int(x), self.remindme.keys())) + 1)
-        self.remindme[rm_index] = {"server" : ctx.message.server.id, "author" : ctx.message.author.id, "created" : datetime.datetime.utcnow().timestamp(), "message" : entry["message"], "timestamp" : entry["timestamp"]}
-        write_json('remindme.json', self.remindme)
-        await self.bot.say("Okay **{}** you'll be reminded about \"{}\" in {}. ID: **{}**".format(ctx.message.author.name, entry["message"], human_time, rm_index))
-
-    @remind_me.error
-    async def rm_error(self, error, ctx):
-        if isinstance(error, commands.BadArgument):
-            await self.bot.say(str(error))
-
-    async def remindme_checker(self):
-        DELAY = 10
-        while self == self.bot.get_cog("Meta"):
-            for k, v in self.remindme.items():
-                try:
-                    diff = v["timestamp"] - datetime.datetime.utcnow().timestamp() < 0
-                except:
-                    diff = False
-                if diff:
-                    try:
-                        rm_s = str(v["server"])
-                        rm_a = str(v["author"])
-                        destination = self.bot.get_server(rm_s).get_member(rm_a)
-                        old_datetime = datetime.datetime.fromtimestamp(v["created"])
-                        human_time = formats.human_timedelta(old_datetime)
-                        await self.bot.send_message(destination, "You asked to be reminded about \"{}\"\n{} ago".format(v["message"], human_time.replace(' ago', '')))
-                        self.remindme = { a:b for a,b in self.remindme.items() if a!=k }
-                        write_json('remindme.json', self.remindme)
-                        await asyncio.sleep(1)
-                    except:
-                        continue
-            await asyncio.sleep(10)
-    
-    @timer.error
-    async def timer_error(self, error, ctx):
-        if isinstance(error, commands.BadArgument):
-            await self.bot.say(str(error))
-
-    
-    
-    
-    
-    @commands.command(name='quit', hidden=True)
-    @checks.is_owner()
-    async def _quit(self):
-        """Quits the bot."""
-        await self.bot.logout()
-
-
 
     @commands.command(name='serverinfo', pass_context=True, no_pm=True)
     async def server_info(self, ctx):
-        server = ctx.message.server
-        roles = [role.name.replace('@', '@\u200b') for role in server.roles]
+        guild = ctx.guild
+        roles = [role.name.replace('@', '@\u200b') for role in guild.roles]
 
-        secret_member = copy.copy(server.me)
-        secret_member.id = '0'
-        secret_member.roles = [server.default_role]
+        class Secret:
+            pass
+
+        secret_member = Secret()
+        secret_member.id = 0
+        secret_member.roles = [guild.default_role]
 
         # figure out what channels are 'secret'
         secret_channels = 0
         secret_voice = 0
         text_channels = 0
-        for channel in server.channels:
+        for channel in guild.channels:
             perms = channel.permissions_for(secret_member)
-            is_text = channel.type == discord.ChannelType.text
+            is_text = isinstance(channel, discord.TextChannel)
             text_channels += is_text
             if is_text and not perms.read_messages:
                 secret_channels += 1
             elif not is_text and (not perms.connect or not perms.speak):
                 secret_voice += 1
 
-        voice_channels = len(server.channels) - text_channels
-        member_by_status = Counter(str(m.status) for m in server.members)
+        voice_channels = len(guild.channels) - text_channels
+        member_by_status = Counter(str(m.status) for m in guild.members)
 
         e = discord.Embed()
-        e.title = 'Info for ' + server.name
-        e.add_field(name='ID', value=server.id)
-        e.add_field(name='Owner', value=server.owner)
-        if server.icon:
-            e.set_thumbnail(url=server.icon_url)
+        e.title = 'Info for ' + guild.name
+        e.add_field(name='ID', value=guild.id)
+        e.add_field(name='Owner', value=guild.owner)
+        if guild.icon:
+            e.set_thumbnail(url=guild.icon_url)
 
-        if server.splash:
-            e.set_image(url=server.splash_url)
+        if guild.splash:
+            e.set_image(url=guild.splash_url)
 
-        e.add_field(name='Partnered?', value='Yes' if len(server.features) >= 3 else 'No')
+        info = []
+        info.append(ctx_tick[len(guild.features) >= 3] + " Partnered")
 
-        fmt = 'Text %s (%s secret)\nVoice %s (%s locked)'
-        e.add_field(name='Channels', value=fmt % (text_channels, secret_channels, voice_channels, secret_voice))
+        sfw = guild.explicit_content_filter is not discord.ContentFilter.disabled
+        info.append(ctx_tick[sfw] + " Scanning Images")
+        info.append(ctx_tick[guild.member_count > 100] + " Large")
 
-        fmt = 'Total: {0}\nOnline: {1[online]}' \
-              ', Offline: {1[offline]}' \
-              '\nDnD: {1[dnd]}' \
-              ', Idle: {1[idle]}'
+        e.add_field(name='Info', value='\n'.join(map(str, info)))
 
-        e.add_field(name='Members', value=fmt.format(server.member_count, member_by_status))
-        e.add_field(name='Roles', value=', '.join(roles) if len(roles) < 10 else '%s roles' % len(roles))
-        e.set_footer(text='Created').timestamp = server.created_at
-        await self.bot.say(embed=e)
+        fmt = f'Text {text_channels} ({secret_channels} secret)\nVoice {voice_channels} ({secret_voice} locked)'
+        e.add_field(name='Channels', value=fmt)
 
-    async def say_permissions(self, member, channel):
+        fmt = '<:online:346921745279746048> {} ' \
+              '<:away:346921747330891780> {} ' \
+              '<:dnd:346921781786836992> {} ' \
+              '<:offline:346921814435430400> {}\n' \
+              'Total: {}'.format(member_by_status["online"], member_by_status["idle"], member_by_status["dnd"], member_by_status["offline"], guild.member_count)
+
+        e.add_field(name='Members', value=fmt)
+        e.add_field(name='Roles', value=', '.join(roles) if len(roles) < 10 else f'{len(roles)} roles')
+        e.set_footer(text='Created').timestamp = guild.created_at
+        await ctx.send(embed=e)
+
+
+    async def say_permissions(self, ctx, member, channel):
         permissions = channel.permissions_for(member)
-        entries = [(attr.replace('_', ' ').title(), val) for attr, val in permissions]
-        await formats.entry_to_code(self.bot, entries)
+        e = discord.Embed()
+        allowed, denied = [], []
+        for name, value in permissions:
+            name = name.replace('_', ' ').title()
+            if value:
+                allowed.append(name)
+            else:
+                denied.append(name)
+
+        e.add_field(name='Allowed', value='\n'.join(allowed))
+        e.add_field(name='Denied', value='\n'.join(denied))
+        await ctx.send(embed=e)
 
     @commands.command(pass_context=True, no_pm=True)
     async def permissions(self, ctx, *, member : discord.Member = None):
@@ -500,9 +330,9 @@ class Meta:
         """
         channel = ctx.message.channel
         if member is None:
-            member = ctx.message.author
+            member = ctx.author
 
-        await self.say_permissions(member, channel)
+        await self.say_permissions(ctx, member, channel)
 
     @commands.command(pass_context=True, no_pm=True)
     @checks.admin_or_permissions(manage_roles=True)
@@ -515,12 +345,12 @@ class Meta:
         To execute this command you must have Manage Roles permissions or
         have the Bot Admin role. You cannot use this in private messages.
         """
-        channel = ctx.message.channel
-        member = ctx.message.server.me
-        await self.say_permissions(member, channel)
+        channel = ctx.channel
+        member = ctx.message.guild.me
+        await self.say_permissions(ctx, member, channel)
 
-    @commands.command(aliases=['invite'])
-    async def join(self):
+    @commands.command(name='invite')
+    async def cmd_invite(self, ctx):
         """Joins a server."""
         perms = discord.Permissions.none()
         perms.read_messages = True
@@ -533,7 +363,8 @@ class Meta:
         perms.read_message_history = True
         perms.attach_files = True
         perms.add_reactions = True
-        await self.bot.say(discord.utils.oauth_url(self.bot.client_id, perms))
+        perms.view_audit_log = True
+        await ctx.send(discord.utils.oauth_url(self.bot.client_id, perms))
 
 
 
@@ -542,18 +373,18 @@ class Meta:
         """pls no spam"""
 
         for i in range(3):
-            await self.bot.say(3 - i)
+            await ctx.send(3 - i)
             await asyncio.sleep(1)
 
-        await self.bot.say('go')
+        await ctx.send('go')
     @commands.command(pass_context=True)
     async def help(self, ctx):
         url = r"https://github.com/CarlGroth/Carl-Bot/blob/master/readme.md"
-        await self.bot.send_message(ctx.message.author, 'Check out the commands on github: {}\nor PM Carl if you have any unanswered questions.'.format(url))
+        await ctx.author.send('Check out the commands on github: {}\nor PM Carl if you have any unanswered questions.'.format(url))
 
 
 def setup(bot):
-    n = Meta(bot)
-    loop2 = asyncio.get_event_loop()
-    loop2.create_task(n.remindme_checker())
-    bot.add_cog(n)
+    # n = Meta(bot)
+    # loop2 = asyncio.get_event_loop()
+    # loop2.create_task(n.remindme_checker())
+    bot.add_cog(Meta(bot))
