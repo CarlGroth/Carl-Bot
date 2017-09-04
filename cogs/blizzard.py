@@ -247,7 +247,7 @@ class Blizzard:
         if realm.lower() not in self.realms[zone] and zone in locales:
             # Super high tech fuzzy string matching
             # incredibly helpful since blizzard doesn't seem to
-            # have any consistensy across their realm names
+            # have any consistency across their realm names
             # will correct "tarnmil" to "tarren-mill" works for russian servers too
             realm2 = process.extractOne(realm.lower(), self.realms[zone])
             # I think I'm the only person who actually cares about the ratio, but at least
