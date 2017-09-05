@@ -8,7 +8,6 @@ cogs/utils/
 cogs/admin.py
 cogs/reminders.py
 cogs/convert.py
-cogs/mod.py
 cogs/nsfw.py
 cogs/__pycache__
 carlbot.log
