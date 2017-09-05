@@ -1,330 +1,367 @@
-import json
-import discord
 import asyncio
-import inspect
 import datetime
 import time
-import random
 import re
-import aiohttp
 import sqlite3
+import aiohttp
+import discord
 
-from collections import Counter
 from discord.ext import commands
-from cogs.utils import config, checks
+from cogs.utils import checks
+
 
 def clean_string(string):
     string = re.sub('@', '@\u200b', string)
     string = re.sub('#', '#\u200b', string)
     return string
 
+
 CARL_DISCORD_ID = 106429844627169280
 dt_format = '%Y-%m-%d %H:%M:%S (UTC+0)'
+
+
 class Automod:
     def __init__(self, bot):
         self.bot = bot
         self.conn = sqlite3.connect('database.db')
         self.c = self.conn.cursor()
         self.c.execute('''CREATE TABLE IF NOT EXISTS servers
-             (id text, log_channel text, twitch_channel text, welcome_message text, bot_channel text)''')
+                         (id text, log_channel text, twitch_channel text,
+                          welcome_message text, bot_channel text)''')
         self.c.execute('''CREATE TABLE IF NOT EXISTS logging
-             (server text, message_edit boolean, message_deletion boolean, role_changes boolean, name_update boolean, member_movement boolean, avatar_changes boolean, bans boolean, ignored_channels text)''')
-
+             (server text, message_edit boolean, message_deletion boolean,
+             role_changes boolean, name_update boolean, member_movement boolean,
+             avatar_changes boolean, bans boolean, ignored_channels text)''')
 
     @commands.group(name='set', invoke_without_command=True)
     @checks.admin_or_permissions(manage_server=True)
     async def _set(self, ctx):
         await ctx.send("You need to use a subcommand")
 
-
     @_set.command()
     @checks.admin_or_permissions(manage_server=True)
-    async def twitch(self, ctx, *, channel: discord.TextChannel = None):
+    async def twitch(self, ctx, *, channel: discord.TextChannel=None):
         if channel is None:
             return await ctx.send("You need to mention a channel")
-        self.c.execute('UPDATE servers SET twitch_channel=? WHERE id=?', (channel.id, ctx.message.guild.id))
+        self.c.execute('''UPDATE servers
+                          SET twitch_channel=?
+                          WHERE id=?''',
+                       (channel.id, ctx.message.guild.id))
         self.conn.commit()
         await ctx.send("Twitch channel set to <#{}>".format(channel.id))
 
     @_set.command(aliases=['logs', 'logchannel'])
     @checks.admin_or_permissions(manage_server=True)
-    async def log(self, ctx, *, channel: discord.TextChannel = None):
+    async def log(self, ctx, *, channel: discord.TextChannel=None):
         if channel is None:
             return await ctx.send("You need to mention a channel")
-        self.c.execute('UPDATE servers SET log_channel=? WHERE id=?', (channel.id, ctx.message.guild.id))
+        self.c.execute('''UPDATE servers
+                          SET log_channel=?
+                          WHERE id=?''',
+                       (channel.id, ctx.message.guild.id))
         self.conn.commit()
         await ctx.send("Logging channel set to <#{}>".format(channel.id))
-    
+
     @_set.command(name='bot', aliases=['botchannel'])
     @checks.admin_or_permissions(manage_server=True)
-    async def _bot(self, ctx, channel: discord.TextChannel = None):
+    async def _bot(self, ctx, channel: discord.TextChannel=None):
         if channel is None:
             return await ctx.send("You need to mention a channel")
-        self.c.execute('UPDATE servers SET bot_channel=? WHERE id=?', (channel.id, ctx.message.guild.id))
+        self.c.execute('''UPDATE servers
+                          SET bot_channel=?
+                          WHERE id=?''',
+                       (channel.id, ctx.message.guild.id))
         self.conn.commit()
         await ctx.send("Bot channel changed to <#{}>".format(channel.id))
-
 
     @_set.command(aliases=['welcomemessage'])
     @checks.admin_or_permissions(manage_server=True)
     async def welcome(self, ctx, *, message: str = None):
         if message is None:
-            self.c.execute('UPDATE servers SET welcome_message=? WHERE id=?', (None, ctx.message.guild.id))
+            self.c.execute('''UPDATE servers
+                              SET welcome_message=?
+                              WHERE id=?''',
+                           (None, ctx.message.guild.id))
             self.conn.commit()
             return await ctx.send("Welcome message removed")
-        self.c.execute('UPDATE servers SET welcome_message=? WHERE id=?', (message, ctx.message.guild.id))
+
+        self.c.execute('''UPDATE servers
+                          SET welcome_message=?
+                          WHERE id=?''',
+                       (message, ctx.message.guild.id))
         self.conn.commit()
         await ctx.send("Welcome message successfully updated.")
 
+    @commands.command(name='config')
+    @checks.admin_or_permissions(manage_server=True)
+    async def _cfg(self, ctx):
+        enu = {
+            "Message edits": 1,
+            "Message deletions": 2,
+            "Role updates": 3,
+            "Name changes": 4,
+            "Join/Leave": 5,
+            "Avatar updates": 6,
+            "Bans/Unbans": 7
+        }
+        self.c.execute('SELECT * FROM logging WHERE server=?', (ctx.guild.id,))
+        logging_table = self.c.fetchone()
+        self.c.execute('SELECT * FROM config WHERE guild_id=?',
+                       (ctx.guild.id,))
+        config = self.c.fetchone()
+        self.c.execute(
+            'SELECT user_id, plonked FROM userconfig WHERE guild_id=?', (ctx.guild.id,))
+        id_and_plonk = self.c.fetchall()
+        self.c.execute('''SELECT log_channel, twitch_channel, prefix
+                          FROM servers WHERE id=?''',
+                       (ctx.guild.id,))
+        cfg = self.c.fetchone()
 
+        e = discord.Embed(title=f"{ctx.guild.name}",
+                          description=f"Bot config for {ctx.guild.name}")
+        enabled, disabled = [], []
+        for k, v in enu.items():
+            if logging_table[v]:
+                enabled.append(k.capitalize())
+            else:
+                disabled.append(k.capitalize())
+        ena = '\n'.join(enabled) or "None"
+        dis = '\n'.join(disabled) or "None"
+        cmd_ignore = config[1]
+        if cmd_ignore is None:
+            cmd_ignore = "None"
+        elif cmd_ignore == "":
+            cmd_ignore = "None"
+        else:
+            cmd_ignore = '\n'.join("<#{}>".format(x)
+                                   for x in config[1].split(',') if x != "")
+        ignore = logging_table[8] or "None"
+        if ignore != "None":
+            ignore = '\n'.join("<#{}>".format(x)
+                               for x in ignore.split(',') if x != "")
+        if config[2] is None:
+            cmd_disabled = "None"
+        elif config[2] == "":
+            cmd_disabled = "None"
+        else:
+            cmd_disabled = config[2].split(',')
+            cmd_disabled = ', '.join(cmd_disabled) or None
+        log_chan = f'<#{cfg[0]}>' if cfg[0] is not None else "None"
+        twtch_chan = f'<#{cfg[1]}>' if cfg[1] is not None else "None"
+        plonks = '\n'.join(
+            [f"<@{x[0]}>" for x in id_and_plonk if x[1]]) or "None"
+        server_prefixes = cfg[2].split(',')
+        server_prefixes = '\n'.join(server_prefixes)
+        e.add_field(name='Enabled (log)', value=ena)
+        e.add_field(name='Disabled (log)', value=dis)
+        e.add_field(name='Ignored Channels (log)', value=ignore)
+        e.add_field(name="Ignored Channels", value=cmd_ignore)
+        e.add_field(name="Disabled Commands", value=cmd_disabled)
+        e.add_field(name="Plonks", value=plonks)
+        e.add_field(name="Logging Channel", value=log_chan)
+        e.add_field(name="Twitch Channel", value=twtch_chan)
+        e.add_field(name="Prefixes", value=server_prefixes)
+        await ctx.send(embed=e)
 
-
-
-
-
-
-
-    @commands.group(name='log', aliases=['config'], invoke_without_command=True)
+    @commands.group(name='log', invoke_without_command=True)
     @checks.admin_or_permissions(manage_server=True)
     async def _log(self, ctx, logging: str = None):
-        
-        if logging is None:
-            enu = {
-            "Message edits"     : 1,
-            "Message deletions" : 2,
-            "Role updates"      : 3,
-            "Name changes"      : 4,
-            "Join/Leave"        : 5,
-            "Avatar updates"    : 6,
-            "Bans/Unbans"       : 7
-        }
-            a = self.c.execute('SELECT * FROM logging WHERE server=?', (ctx.guild.id,))
-            a = a.fetchone()
-            b = self.c.execute('SELECT * FROM userconfig WHERE (guild_id=? AND user_id=?)', (ctx.guild.id, ctx.author.id))
-            b = b.fetchone()
-            c = self.c.execute('SELECT * FROM config WHERE guild_id=?', (ctx.guild.id,))
-            c = c.fetchone()
-            
-            d = self.c.execute('SELECT user_id, plonked FROM userconfig WHERE guild_id=?', (ctx.guild.id,))
-            d = d.fetchall()
-            xdxd = self.c.execute('SELECT log_channel, twitch_channel, prefix FROM servers WHERE id=?', (ctx.guild.id,))
-            xdxd = xdxd.fetchone()
-            
-            e = discord.Embed(title=f"{ctx.guild.name}", description=f"Bot config for {ctx.guild.name}")
-            enabled, disabled = [], []
-            for k, v in enu.items():
-                if a[v]:
-                    enabled.append(k.capitalize())
-                else:
-                    disabled.append(k.capitalize())
-            ena = '\n'.join(enabled) or "None"
-            dis = '\n'.join(disabled) or "None"
-            cmd_ignore = c[1]
-            if cmd_ignore is None:
-                cmd_ignore = "None"
-            elif cmd_ignore == "":
-                cmd_ignore = "None"
-            else:
-                #cmd_ignore = c[1].split(',')
-                #cmd_ignore = '\n'.join(cmd_ignore)
-                cmd_ignore = '\n'.join("<#{}>".format(x) for x in c[1].split(',') if x != "")
-            ignore = a[8] or "None"
-            if ignore != "None":
-                ignore = '\n'.join("<#{}>".format(x) for x in ignore.split(',') if x != "")
-            if c[2] is None:
-                cmd_disabled = "None"
-            elif c[2] == "":
-                cmd_disabled = "None"   
-            else:
-                cmd_disabled = c[2].split(',')
-                cmd_disabled = ', '.join(cmd_disabled) or None
-            log_chan = f'<#{xdxd[0]}>' if xdxd[0] is not None else "None"
-            twtch_chan = f'<#{xdxd[1]}>' if xdxd[1] is not None else "None"
-            plonks = '\n'.join([f"<@{x[0]}>" for x in d if x[1]]) or "None"
-            server_prefixes = xdxd[2].split(',')
-            server_prefixes = '\n'.join(server_prefixes)
-            e.add_field(name='Enabled (log)', value=ena)
-            e.add_field(name='Disabled (log)', value=dis)
-            e.add_field(name='Ignored Channels (log)', value=ignore)
-            e.add_field(name="Ignored Channels", value=cmd_ignore)
-            e.add_field(name="Disabled Commands", value=cmd_disabled)
-            e.add_field(name="Plonks", value=plonks)
-            e.add_field(name="Logging Channel", value=log_chan)
-            e.add_field(name="Twitch Channel", value=twtch_chan)
-            e.add_field(name="Prefixes", value=server_prefixes)
-            #e.set_footer(text=ctx.guild.name)
-            await ctx.send(embed=e)
-            return
+        # This is mostly to keep myself sane
         enumeration = {
-            "edit"  : 1,
+            "edit": 1,
             "delete": 2,
-            "role"  : 3,
-            "name"  : 4,
-            "join"  : 5,
+            "role": 3,
+            "name": 4,
+            "join": 5,
             "avatar": 6,
-            "ban"   : 7
+            "ban": 7
         }
+        # this allows the user to be pretty
+        # vague in their logging options
+        # and still get the right option
+        # also makes it less 1337h4xx0r
         translation = {
             "avatar": "avatar_changes",
-            "edit"  : "message_edit",
-            "role"  : "role_changes",
+            "edit": "message_edit",
+            "role": "role_changes",
             "delete": "message_deletion",
-            "ban"   : "bans",
-            "join"  : "member_movement",
-            "name"  : "name_update"
+            "ban": "bans",
+            "join": "member_movement",
+            "name": "name_update"
         }
-        
+
         logging = logging.lower()
         update = None
-        a = self.c.execute('SELECT * FROM logging WHERE server=?', (ctx.message.guild.id,))
-        a = a.fetchone()
-        if a is None:
-            self.c.execute('INSERT INTO logging VALUES (?, ?, ?, ?, ?, ?, ?, ?)', (ctx.message.guild.id, 1, 1, 1, 1, 1, 1, 1))
+        self.c.execute('''SELECT *
+                          FROM logging
+                          WHERE server=?''',
+                       (ctx.message.guild.id,))
+        logging_config = self.c.fetchone()
+        if logging_config is None:
+            # This only happens if the bot somehow missed adding the guild
+            self.c.execute('''INSERT INTO logging
+                              VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+                           (ctx.message.guild.id, 1, 1, 1, 1, 1, 1, 1))
             self.conn.commit()
-            a = self.c.execute('SELECT * FROM logging WHERE server=?', (ctx.message.guild.id,))
-            a = a.fetchone()
+            # We still want the command to work, and by default everything will be set to true
+            self.c.execute('''SELECT *
+                              FROM logging
+                              WHERE server=?''',
+                           (ctx.message.guild.id,))
+            logging_config = self.c.fetchone()
+        # This looks very ugly but I'm not
+        # entirely sure how I'd meaningfully
+        # change it
         if "avatar" in logging:
-            update = translation["avatar"]
-            index = enumeration["avatar"]
-            value = not a[index]
-            self.c.execute('UPDATE logging SET avatar_changes=? WHERE server=?', (value, ctx.message.guild.id))
-            self.conn.commit()
+            string = "avatar"
         elif "edit" in logging:
-            update = translation["edit"]
-            index = enumeration["edit"]
-            value = not a[index]
-            self.c.execute('UPDATE logging SET message_edit=? WHERE server=?', (value, ctx.message.guild.id))
-            self.conn.commit()
+            string = "edit"
         elif "delete" in logging:
-            update = translation["delete"]
-            index = enumeration["delete"]
-            value = not a[index]
-            self.c.execute('UPDATE logging SET message_deletion=? WHERE server=?', (value, ctx.message.guild.id))
-            self.conn.commit()
+            string = "delete"
         elif "role" in logging:
-            update = translation["role"]
-            index = enumeration["role"]
-            value = not a[index]
-            self.c.execute('UPDATE logging SET role_changes=? WHERE server=?', (value, ctx.message.guild.id))
-            self.conn.commit()
+            string = "role"
         elif "ban" in logging:
-            update = translation["ban"]
-            index = enumeration["ban"]
-            value = not a[index]
-            self.c.execute('UPDATE logging SET bans=? WHERE server=?', (value, ctx.message.guild.id))
-            self.conn.commit()
+            string = "ban"
         elif "join" in logging:
-            update = translation["join"]
-            index = enumeration["join"]
-            value = not a[index]
-            self.c.execute('UPDATE logging SET member_movement=? WHERE server=?', (value, ctx.message.guild.id))
-            self.conn.commit()
+            string = "join"
         elif "leave" in logging:
-            update = translation["join"]
-            index = enumeration["join"]
-            value = not a[index]
-            self.c.execute('UPDATE logging SET member_movement=? WHERE server=?', (value, ctx.message.guild.id))
-            self.conn.commit()
+            string = "join"
         elif "name" in logging:
-            update = translation["name"]
-            index = enumeration["name"]
-            value = not a[index]
-            self.c.execute('UPDATE logging SET name_update=? WHERE server=?', (value, ctx.message.guild.id))
-            self.conn.commit()
+            string = "name"
+
         else:
-            return await ctx.send("Invalid subcommand passed, accepted subcommands: avatar, edit, role, delete, ban, join, name, ignore, unignore")
-        
-        
+            return await ctx.send(f"{logging} is not a valid subcommand, try: avatar, edit, role, delete, ban, join, name, ignore or unignore")
+
+        update = translation[string]
+        index = enumeration[string]
+        value = not logging_config[index]
+        # This only looks unsafe
+        # for some reason sqlite3 doesn't
+        # like me using bindings to select which
+        # column that will be updated so I use
+        # string interpolation instead ¯\_(ツ)_/¯
+        self.c.execute(f'''UPDATE logging
+                           SET {translation[string]}=?
+                           WHERE server=?''',
+                       (value, ctx.message.guild.id))
+        self.conn.commit()
+
         await ctx.send("Set {} to {}".format(logging, value))
-
-
-        
 
     @_log.command()
     @checks.admin_or_permissions(manage_server=True)
-    async def ignore(self, ctx, channel: discord.TextChannel = None):
-        mentioned_channels = [channel.id] if channel is not None else [ctx.channel.id]
+    async def ignore(self, ctx, channel: discord.TextChannel=None):
+        mentioned_chans = [
+            channel.id] if channel is not None else [ctx.channel.id]
         if len(ctx.message.channel_mentions) >= 2:
-            mentioned_channels = [x.id for x in ctx.message.channel_mentions]
-        mentioned_channels = ','.join([str(x) for x in mentioned_channels if x is not None])
+            mentioned_chans = [x.id for x in ctx.message.channel_mentions]
+        mentioned_chans = ','.join([str(x)
+                                    for x in mentioned_chans if x is not None])
 
-        a = self.c.execute('SELECT ignored_channels FROM logging WHERE server=?', (ctx.message.guild.id,))
-        self.conn.commit()
-        a = a.fetchone()[0]
+        self.c.execute('''SELECT ignored_channels
+                          FROM logging
+                          WHERE server=?''',
+                       (ctx.message.guild.id,))
+        ignored_channels = self.c.fetchone()[0]
 
-        saved_channels = a.split(',') if a is not None else [] # our already ignored channels
+        # our already ignored channels
+        saved_channels = ignored_channels.split(
+            ',') if ignored_channels is not None else []
+
         # Since I have an ignore and an unignore command, I can use set.union()
         # To make calculating the new ignored channels easy
-        new_channels = list(set(mentioned_channels.split(',')).union(saved_channels))
+        new_channels = list(
+            set(mentioned_chans.split(',')).union(saved_channels))
         new_channels = [x for x in new_channels if x != ""]
         new_channels = ','.join(new_channels)
 
-
-        self.c.execute('UPDATE logging SET ignored_channels=? WHERE server=?', (new_channels, ctx.message.guild.id))
+        self.c.execute('''UPDATE logging
+                          SET ignored_channels=?
+                          WHERE server=?''',
+                       (new_channels, ctx.message.guild.id))
         self.conn.commit()
 
         if channel is None:
-            # If no channels were mentioned, assume they wanted the 
+            # If no channels were mentioned, assume they wanted the
             # channel the message was sent in to be ignored
-            mentioned_channels = ','.join([x for x in mentioned_channels.split(',') if x is not None])
-            names = ', '.join(["<#{}>".format(x) for x in mentioned_channels.split(',')])
+            mentioned_chans = ','.join(
+                [x for x in mentioned_chans.split(',') if x is not None])
+            names = ', '.join(["<#{}>".format(x)
+                               for x in mentioned_chans.split(',')])
         else:
-            new_channels = ','.join([str(x.id) for x in ctx.message.channel_mentions if x is not None])
-            names = ', '.join(["<#{}>".format(x) for x in new_channels.split(',')])
-        await ctx.send("Ignored {}".format(names)) 
+            channel_mentions = ctx.message.channel_mentions
+            new_channels = ','.join([str(x.id)
+                                     for x in channel_mentions if x is not None])
+            names = ', '.join(["<#{}>".format(x)
+                               for x in new_channels.split(',')])
+        await ctx.send("Ignored {}".format(names))
         # This is of course wrong when mentioning more channels
-        # Than will be added, hopefully people know not to 
+        # Than will be added, hopefully people know not to
 
     @_log.command()
     @checks.admin_or_permissions(manage_server=True)
-    async def unignore(self, ctx, channel: discord.TextChannel = None):
-        mentioned_channels = [channel.id] if channel is not None else [ctx.channel.id]
+    async def unignore(self, ctx, channel: discord.TextChannel=None):
+        mentioned_chans = [
+            channel.id] if channel is not None else [ctx.channel.id]
         if len(ctx.message.channel_mentions) >= 2:
-            mentioned_channels = [x.id for x in ctx.message.channel_mentions]
-        mentioned_channels = ','.join([str(x) for x in mentioned_channels if x is not None])
+            mentioned_chans = [x.id for x in ctx.message.channel_mentions]
+        mentioned_chans = ','.join([str(x)
+                                    for x in mentioned_chans if x is not None])
 
-        a = self.c.execute('SELECT ignored_channels FROM logging WHERE server=?', (str(ctx.message.guild.id),))
-        self.conn.commit()
-        a = a.fetchone()[0]
+        self.c.execute('''SELECT ignored_channels
+                          FROM logging
+                          WHERE server=?''',
+                       (str(ctx.message.guild.id),))
+        unignored_channels = self.c.fetchone()[0]
 
-        saved_channels = a.split(',') if a is not None else []
-        new_channels = list(filter(lambda x: x not in mentioned_channels, saved_channels))
+        saved_channels = unignored_channels.split(
+            ',') if unignored_channels is not None else []
+        new_channels = list(
+            filter(lambda x: x not in mentioned_chans, saved_channels))
         new_channels = ','.join(new_channels)
 
-        self.c.execute('UPDATE logging SET ignored_channels=? WHERE server=?', (new_channels, str(ctx.message.guild.id)))
+        self.c.execute('''UPDATE logging
+                          SET ignored_channels=?
+                          WHERE server=?''',
+                       (new_channels, str(ctx.message.guild.id)))
         self.conn.commit()
 
-        if new_channels == "":            
-            mentioned_channels = ','.join([x for x in mentioned_channels.split(',') if x is not None])
-            names = ', '.join(["<#{}>".format(x) for x in mentioned_channels.split(',')])
+        if new_channels == "":
+            mentioned_chans = ','.join(
+                [x for x in mentioned_chans.split(',') if x is not None])
+            names = ', '.join(["<#{}>".format(x)
+                               for x in mentioned_chans.split(',')])
         else:
             new_channels = ','.join([x for x in new_channels if x is not None])
-            names = ', '.join(["<#{}>".format(x) for x in new_channels.split(',')])
+            names = ', '.join(["<#{}>".format(x)
+                               for x in new_channels.split(',')])
         await ctx.send("Unignored {}".format(names))
-
-
-
 
     async def on_member_ban(self, guild, user):
         # first we get the channel
-        log_channel = self.c.execute('SELECT log_channel FROM servers WHERE id=?', (str(guild.id),))
-        log_channel = log_channel.fetchall()
+        self.c.execute(
+            'SELECT log_channel FROM servers WHERE id=?', (str(guild.id),))
+        log_channel = self.c.fetchall()
         if log_channel == [] or log_channel[0][0] is None:
             log_channel = discord.utils.get(guild.channels, name='log')
             if log_channel is None:
                 return
         else:
             log_channel = guild.get_channel(int(log_channel[0][0]))
-        predicate = self.c.execute('SELECT * FROM logging WHERE server=?', (str(guild.id),))
+        self.c.execute('SELECT * FROM logging WHERE server=?',
+                       (str(guild.id),))
         predicate = self.c.fetchone()
         # This is pretty lazy programming, selecting wildcards. But the gist of it is
         # that we want to see if ban logging is enabled or not
         if predicate[7]:
-            fmt = "<:FeelsBanMan:335145180833251330> **{0.name}#{0.discriminator}** *({0.id})* was banned from the server at `{1}`"
-            await log_channel.send(fmt.format(user, datetime.datetime.utcnow().strftime(dt_format)))
+            ban_emoji = "<:FeelsBanMan:335145180833251330>"
+            pretty_date = datetime.datetime.utcnow().strftime(dt_format)
+            fmt = "{2} **{0}** *({0.id})* was banned from the server at `{1}`"
+            await log_channel.send(fmt.format(user, pretty_date, ban_emoji))
 
     async def on_member_unban(self, guild, user):
-        log_channel = self.c.execute('SELECT log_channel FROM servers WHERE id=?', (str(guild.id),))
+        log_channel = self.c.execute(
+            'SELECT log_channel FROM servers WHERE id=?', (str(guild.id),))
         log_channel = log_channel.fetchall()
         if log_channel == [] or log_channel[0][0] is None:
             log_channel = discord.utils.get(guild.channels, name='log')
@@ -332,19 +369,21 @@ class Automod:
                 return
         else:
             log_channel = guild.get_channel(int(log_channel[0][0]))
-        predicate = self.c.execute('SELECT * FROM logging WHERE server=?', (str(guild.id),))
+        predicate = self.c.execute(
+            'SELECT * FROM logging WHERE server=?', (str(guild.id),))
         predicate = self.c.fetchone()
         if predicate[7]:
             fmt = "**{0.name}#{0.discriminator}** *({0.id})* was unbanned from the server at `{1}`"
             await log_channel.send(fmt.format(user, datetime.datetime.utcnow().strftime(dt_format)))
-        
 
-
-    async def on_member_update(self, before, after):        
+    async def on_member_update(self, before, after):
         if before is None:
-            return            
-        log_channel = self.c.execute('SELECT log_channel FROM servers WHERE id=?', (str(before.guild.id),))
-        log_channel = log_channel.fetchall()
+            return
+        self.c.execute('''SELECT log_channel
+                          FROM servers
+                          WHERE id=?''',
+                       (str(before.guild.id),))
+        log_channel = self.c.fetchall()
         if log_channel == [] or log_channel[0][0] is None:
             log_channel = discord.utils.get(before.guild.channels, name='log')
             if log_channel is None:
@@ -352,8 +391,11 @@ class Automod:
         else:
             log_channel = self.bot.get_channel(id=int(log_channel[0][0]))
         if before.display_name != after.display_name:
-            a = self.c.execute('SELECT names FROM users WHERE (server=? AND id=?)', (before.guild.id, before.id))
-            name_list = a.fetchone()[0]
+            self.c.execute('''SELECT names
+                              FROM users
+                              WHERE (server=? AND id=?)''',
+                           (before.guild.id, before.id))
+            name_list = self.c.fetchone()[0]
             name_list = name_list.split(',')
             if after.display_name not in name_list:
                 name_list.append(after.display_name)
@@ -364,56 +406,65 @@ class Automod:
                 name_list.pop(old_index)
                 name_list.append(after.display_name)
             new_names = ','.join(name_list)
-            self.c.execute('UPDATE users SET names=? WHERE (id=? AND server=?)', (new_names, before.id, before.guild.id))
+            self.c.execute('''UPDATE users
+                              SET names=?
+                              WHERE (id=? AND server=?)''',
+                           (new_names, before.id, before.guild.id))
             self.conn.commit()
-            fmt = ":spy: **{0}#{1}** changed their nickname:\n**Before:** {2}\n**+After:** {3}"
-            fmt_edit = ":spy: **{0}#{1}** had their nickname changed by **{4}**:\n**Before:** {2}\n**+After:** {3}"
-            fmt_edit_self = ":spy: **{0}#{1}** changed their own nickname:\n**Before:** {2}\n**+After:** {3}"
-            fmt = fmt.format(before.name, before.discriminator, before.display_name, after.display_name)
+            fmt = ":spy: **{0}** changed their nickname:\n**Before:** {1}\n**+After:** {2}"
+            fmt_edit = ":spy: **{0}** had their nickname changed by **{3}**:\n**Before:** {1}\n**+After:** {2}"
+            fmt_edit_self = ":spy: **{0}** changed their own nickname:\n**Before:** {1}\n**+After:** {2}"
+            fmt = fmt.format(before, before.display_name, after.display_name)
             fmt = clean_string(fmt)
             # No @everyones
             # No codeblocks
             fmt = re.sub("([`])", r"\\\1", fmt)
-            predicate = self.c.execute('SELECT * FROM logging WHERE server=?', (before.guild.id,))
+            predicate = self.c.execute(
+                'SELECT * FROM logging WHERE server=?', (before.guild.id,))
             predicate = self.c.fetchone()
             if predicate[4]:
                 msg = await log_channel.send(fmt)
                 perms = before.guild.me.guild_permissions
                 if not perms.view_audit_log:
                     return
-                async for entry in before.guild.audit_logs(limit=100, action=discord.AuditLogAction.member_update):
+                action = discord.AuditLogAction.member_update
+                async for entry in before.guild.audit_logs(limit=100, action=action):
                     # Unlike some other audit log actions, name changes seem _very_ responsive
                     # and even spamming it seems to have no effect on its accuracy
                     # It's one ugly conditional but it sure works
-                    if entry.target == after:                        
+                    if entry.target == after:
                         if (before.display_name == entry.before.nick and (after.display_name == entry.after.nick or entry.after.nick is None)) or (entry.before.nick is None and after.display_name == entry.after.nick):
                             if entry.target != entry.user:
-                                await msg.edit(content=fmt_edit.format(before.name, before.discriminator, before.display_name, after.display_name, entry.user))
+                                await msg.edit(content=fmt_edit.format(before, before.display_name, after.display_name, entry.user))
                                 return
                             else:
-                                await msg.edit(content=fmt_edit_self.format(before.name, before.discriminator, before.display_name, after.display_name))
+                                await msg.edit(content=fmt_edit_self.format(before, before.display_name, after.display_name))
                                 return
-                     
-            
+
         elif before.roles != after.roles:
-            roles = ','.join([str(x.id) for x in after.roles if x.name != "@everyone"])
-            self.c.execute('UPDATE users SET roles=? WHERE (id=? AND server=?)', (roles, before.id, before.guild.id))
+            roles = ','.join([str(x.id)
+                              for x in after.roles if x.name != "@everyone"])
+            self.c.execute('UPDATE users SET roles=? WHERE (id=? AND server=?)',
+                           (roles, before.id, before.guild.id))
             self.conn.commit()
             if len(before.roles) < len(after.roles):
-                #role added
+                # role added
                 s = set(before.roles)
                 # Check for what actually happened
                 newrole = [x for x in after.roles if x not in s]
                 if len(newrole) == 1:
-                    fmt = ":warning: **{}#{}** had the role **{}** added.".format(before.name, before.discriminator, newrole[0].name)
+                    fmt = ":warning: **{}#{}** had the role **{}** added.".format(
+                        before.name, before.discriminator, newrole[0].name)
                 elif not newrole:
                     return
                 else:
-                    # This happens when the bot autoassigns your roles 
+                    # This happens when the bot autoassigns your roles
                     # after rejoining the server
                     new_roles = [x.name for x in newrole]
-                    fmt = ":warning: **{}#{}** had the roles **{}** added.".format(before.name, before.discriminator, ', '.join(new_roles))
-                predicate = self.c.execute('SELECT * FROM logging WHERE server=?', (before.guild.id,))
+                    fmt = ":warning: **{}#{}** had the roles **{}** added.".format(
+                        before.name, before.discriminator, ', '.join(new_roles))
+                predicate = self.c.execute(
+                    'SELECT * FROM logging WHERE server=?', (before.guild.id,))
                 predicate = self.c.fetchone()
                 if predicate[3]:
                     msg = await log_channel.send(clean_string(fmt))
@@ -423,9 +474,9 @@ class Automod:
                     # Like for nicknames, it's very reliable
                     # It seems to work well for updates where more than one role was added
                     async for entry in before.guild.audit_logs(limit=100, action=discord.AuditLogAction.member_role_update):
-                        if entry.target == after: 
-                            if entry.target != entry.user:   
-                                await msg.edit(content=msg.content[:-1]+" to them by **{}**.".format(entry.user))
+                        if entry.target == after:
+                            if entry.target != entry.user:
+                                await msg.edit(content=msg.content[:-1] + " to them by **{}**.".format(entry.user))
                                 return
                             await msg.edit(content=":warning: **{}#{}** added the role **{}** to themselves.".format(before.name, before.discriminator, newrole[0].name))
                             return
@@ -433,13 +484,16 @@ class Automod:
                 s = set(after.roles)
                 newrole = [x for x in before.roles if x not in s]
                 if len(newrole) == 1:
-                    fmt = ":warning: **{}#{}** had the role **{}** removed.".format(before.name, before.discriminator, newrole[0].name)
+                    fmt = ":warning: **{}#{}** had the role **{}** removed.".format(
+                        before.name, before.discriminator, newrole[0].name)
                 elif len(newrole) == 0:
                     return
                 else:
                     new_roles = [x.name for x in newrole]
-                    fmt = ":warning: **{}#{}** had the roles **{}** removed.".format(before.name, before.discriminator, ', '.join(new_roles))
-                predicate = self.c.execute('SELECT * FROM logging WHERE server=?', (before.guild.id,))
+                    fmt = ":warning: **{}#{}** had the roles **{}** removed.".format(
+                        before.name, before.discriminator, ', '.join(new_roles))
+                predicate = self.c.execute(
+                    'SELECT * FROM logging WHERE server=?', (before.guild.id,))
                 predicate = self.c.fetchone()
                 if predicate[3]:
                     msg = await log_channel.send(clean_string(fmt))
@@ -449,7 +503,7 @@ class Automod:
                     async for entry in before.guild.audit_logs(limit=100, action=discord.AuditLogAction.member_role_update):
                         if entry.target == after:
                             if entry.target != entry.user:
-                                await msg.edit(content=msg.content[:-1]+" from them by **{}**.".format(entry.user))
+                                await msg.edit(content=msg.content[:-1] + " from them by **{}**.".format(entry.user))
                                 return
                             await msg.edit(content=":warning: **{}#{}** removed the role **{}** from themselves.".format(before.name, before.discriminator, newrole[0].name))
                             return
@@ -460,17 +514,15 @@ class Automod:
             # as of right now it will send this update to a random
             # server the member is in
             fmt = ":spy: **{0}#{1}** changed their avatar:\n**After:** {2}"
-            predicate = self.c.execute('SELECT * FROM logging WHERE server=?', (after.guild.id,))
+            predicate = self.c.execute(
+                'SELECT * FROM logging WHERE server=?', (after.guild.id,))
             predicate = self.c.fetchone()
             if predicate[6]:
                 await log_channel.send(fmt.format(after.name, after.discriminator, after.avatar_url.replace(".webp", ".png")))
 
-
-
-
-
     async def on_member_join(self, member):
-        log_channel = self.c.execute('SELECT log_channel FROM servers WHERE id=?', (member.guild.id,))
+        log_channel = self.c.execute(
+            'SELECT log_channel FROM servers WHERE id=?', (member.guild.id,))
         log_channel = log_channel.fetchall()
         if log_channel == [] or log_channel[0][0] is None:
             log_channel = discord.utils.get(member.guild.channels, name='log')
@@ -483,16 +535,17 @@ class Automod:
                 # Need to know when I'm being powerplayed
                 fmt = ":white_check_mark: **{0.name}#{0.discriminator}** *({0.id})* Joined the server at `{1}` :white_check_mark: <@137267770537541632> <@106429844627169280> <@158370770068701184> :white_check_mark:"
             else:
-                fmt = ":white_check_mark: **{0.name}#{0.discriminator}** *({0.id})* Joined the server at `{1}` :white_check_mark:"    
-            predicate = self.c.execute('SELECT * FROM logging WHERE server=?', (member.guild.id,))
+                fmt = ":white_check_mark: **{0.name}#{0.discriminator}** *({0.id})* Joined the server at `{1}` :white_check_mark:"
+            predicate = self.c.execute(
+                'SELECT * FROM logging WHERE server=?', (member.guild.id,))
             predicate = self.c.fetchone()
             if predicate[5]:
                 await log_channel.send(fmt.format(member, datetime.datetime.utcnow().strftime(dt_format)))
-            
-            
+
         except Exception as e:
             print(f"on_member_join={e}")
-        a = self.c.execute('SELECT names FROM users WHERE (server=? AND id=?)', (member.guild.id, member.id))
+        a = self.c.execute(
+            'SELECT names FROM users WHERE (server=? AND id=?)', (member.guild.id, member.id))
         add_this_name = a.fetchone()
         # This is so fucking stupid
         if add_this_name is not None:
@@ -503,7 +556,8 @@ class Automod:
             # Sleeping seems required for both the role and nickname change to go through
             await asyncio.sleep(1)
         allRoles = member.guild.roles
-        a = self.c.execute('SELECT roles FROM users WHERE (server=? AND id=?)', (member.guild.id, member.id))            
+        a = self.c.execute(
+            'SELECT roles FROM users WHERE (server=? AND id=?)', (member.guild.id, member.id))
         checkthis = a.fetchone()
         if checkthis is not None:
             checkthis = checkthis[0]
@@ -512,14 +566,15 @@ class Automod:
             checkthis = checkthis.split(',')
             # if even one role can't be added, none will be
             # because of this, I check the role hierarchy
-            rolestobeadded = [x for x in allRoles if (str(x.id) in checkthis and x < member.guild.me.top_role)]
-            cant_add_these_roles = [x for x in allRoles if (str(x.id) in checkthis and x >= member.guild.me.top_role)]
+            rolestobeadded = [x for x in allRoles if (
+                str(x.id) in checkthis and x < member.guild.me.top_role)]
+            cant_add_these_roles = [x for x in allRoles if (
+                str(x.id) in checkthis and x >= member.guild.me.top_role)]
             await member.edit(roles=rolestobeadded)
-        
-        
 
     async def on_member_remove(self, member):
-        destination = self.c.execute('SELECT log_channel FROM servers WHERE id=?', (member.guild.id,))
+        destination = self.c.execute(
+            'SELECT log_channel FROM servers WHERE id=?', (member.guild.id,))
         log_channel = destination.fetchall()
         if log_channel == [] or log_channel[0][0] is None:
             log_channel = discord.utils.get(member.guild.channels, name='log')
@@ -537,7 +592,8 @@ class Automod:
             fmt_log = ":wave: **{0.name}#{0.discriminator}** *({0.id})* Left the server at `{1}` after being kicked by **{2}**"
             fmt_banlog = ":wave: **{0.name}#{0.discriminator}** *({0.id})* Left the server at `{1}` after being banned by **{2}**"
 
-        predicate = self.c.execute('SELECT * FROM logging WHERE server=?', (member.guild.id,))
+        predicate = self.c.execute(
+            'SELECT * FROM logging WHERE server=?', (member.guild.id,))
         predicate = self.c.fetchone()
         if predicate[5]:
             msg = await log_channel.send(fmt.format(member, datetime.datetime.utcnow().strftime(dt_format)))
@@ -552,19 +608,21 @@ class Automod:
                 # probably timer based, unlucky
                 if entry.target == member and (entry.action == discord.AuditLogAction.kick or entry.action == discord.AuditLogAction.ban):
                     if entry.action == discord.AuditLogAction.ban:
-                        postme = fmt_banlog.format(member, datetime.datetime.utcnow().strftime(dt_format), entry.user)
+                        postme = fmt_banlog.format(
+                            member, datetime.datetime.utcnow().strftime(dt_format), entry.user)
                     else:
-                        postme = fmt_log.format(member, datetime.datetime.utcnow().strftime(dt_format), entry.user)
-                    if -10<(entry.created_at - datetime.datetime.utcnow()).total_seconds()<10:
+                        postme = fmt_log.format(
+                            member, datetime.datetime.utcnow().strftime(dt_format), entry.user)
+                    if -10 < (entry.created_at - datetime.datetime.utcnow()).total_seconds() < 10:
                         if entry.reason is not None:
-                            postme = "{} with the reason: {}:wave:".format(postme, entry.reason)
+                            postme = "{} with the reason: {}:wave:".format(
+                                postme, entry.reason)
 
                         else:
-                            postme = "{} without a reason :wave:".format(postme)                        
+                            postme = "{} without a reason :wave:".format(
+                                postme)
                         await msg.edit(content=postme)
                         return
-
-        
 
     async def on_message(self, message):
         if message is None:
@@ -605,7 +663,7 @@ class Automod:
                         # This would probably be enough for b1nzy
                         # to personally ban my account, no snitch
                         await stream_msg.edit(content="<https://streamable.com/{}> processing video{}".format(reply['shortcode'], my_dots))
-                        
+
                         tries += 1
                         await asyncio.sleep(1)
                     await stream_msg.edit(content="https://streamable.com/{}".format(reply['shortcode']))
@@ -620,14 +678,16 @@ class Automod:
                 return
         if message.content == "":
             return
-        
-        poststring = ":x: `{1}` **{0}** Deleted their message:  ```{2}``` in `{3}`".format(clean_string(message.author.display_name), time.strftime("%H:%M:%S"), message.clean_content, message.channel)
+
+        poststring = ":x: `{1}` **{0}** Deleted their message:  ```{2}``` in `{3}`".format(clean_string(
+            message.author.display_name), time.strftime("%H:%M:%S"), message.clean_content, message.channel)
         logstring = ":x: `{1}` **{0}** had their message deleted by **{4}**:  ```{2}``` in `{3}`"
 
         if message.attachments:
             poststring += "\n{}".format(message.attachments[0]['url'])
 
-        log_channel = self.c.execute('SELECT log_channel FROM servers WHERE id=?', (message.guild.id,))
+        log_channel = self.c.execute(
+            'SELECT log_channel FROM servers WHERE id=?', (message.guild.id,))
         log_channel = log_channel.fetchall()
         if log_channel == [] or log_channel[0][0] is None:
             log_channel = discord.utils.get(message.guild.channels, name='log')
@@ -635,9 +695,11 @@ class Automod:
                 return
         else:
             log_channel = message.guild.get_channel(int(log_channel[0][0]))
-        predicate = self.c.execute('SELECT * FROM logging WHERE server=?', (message.guild.id,))
+        predicate = self.c.execute(
+            'SELECT * FROM logging WHERE server=?', (message.guild.id,))
         predicate = self.c.fetchone()
-        ignore_predicate = predicate[8].split(',') if predicate[8] is not None else []
+        ignore_predicate = predicate[8].split(
+            ',') if predicate[8] is not None else []
         if str(message.channel.id) in ignore_predicate:
             return
         if predicate[2]:
@@ -647,12 +709,10 @@ class Automod:
                 return
             async for entry in message.guild.audit_logs(limit=100, action=discord.AuditLogAction.message_delete):
                 if entry.target == message.author:
-                    if -10<(entry.created_at - datetime.datetime.utcnow()).total_seconds()<10:
+                    if -10 < (entry.created_at - datetime.datetime.utcnow()).total_seconds() < 10:
                         await msg.edit(content=logstring.format(clean_string(message.author.display_name), time.strftime("%H:%M:%S"), message.clean_content, message.channel, entry.user))
                         return
-        
 
-        
     async def on_message_edit(self, before, after):
         if before.guild is None:
             return
@@ -661,7 +721,8 @@ class Automod:
         if before.author.id == self.bot.user.id:
             return
 
-        log_channel = self.c.execute('SELECT log_channel FROM servers WHERE id=?', (before.guild.id,))
+        log_channel = self.c.execute(
+            'SELECT log_channel FROM servers WHERE id=?', (before.guild.id,))
         log_channel = log_channel.fetchall()
         if log_channel == [] or log_channel[0][0] is None:
             log_channel = discord.utils.get(before.guild.channels, name='log')
@@ -670,16 +731,17 @@ class Automod:
         else:
             log_channel = before.guild.get_channel(int(log_channel[0][0]))
         fmt = ":pencil2: `{}` **{}** edited their message:\n**Before:** {}\n**+After:** {}"
-        predicate = self.c.execute('SELECT * FROM logging WHERE server=?', (before.guild.id,))
+        predicate = self.c.execute(
+            'SELECT * FROM logging WHERE server=?', (before.guild.id,))
         predicate = self.c.fetchone()
-        ignore_predicate = predicate[8].split(',') if predicate[8] is not None else []
+        ignore_predicate = predicate[8].split(
+            ',') if predicate[8] is not None else []
         if str(before.channel.id) in ignore_predicate:
             return
         if predicate is None:
             predicate = False
         if predicate[1]:
             await log_channel.send(fmt.format(time.strftime("%H:%M:%S"), before.author.name, before.clean_content, after.clean_content))
-        
 
 
 def setup(bot):

@@ -31,7 +31,8 @@ class Stats:
             destination = '#{0.channel} ({0.guild})'.format(message)
             guild_id = ctx.guild.id
 
-        log.info('{0.created_at}: {0.author.name} in {1}: {0.content}'.format(message, destination))
+        log.info('{0.created_at}: {0.author.name} in {1}: {0.content}'.format(
+            message, destination))
 
     async def on_socket_response(self, msg):
         self.bot.socket_stats[msg.get('t')] += 1
@@ -47,10 +48,10 @@ class Stats:
             common = counter.most_common(limit)
         else:
             common = counter.most_common()[limit:]
-        output = '\n'.join('{0:<{1}}: {2}'.format(k, width, c) for k, c in common)
+        output = '\n'.join('{0:<{1}}: {2}'.format(k, width, c)
+                           for k, c in common)
 
         await ctx.send('```\n{}\n```'.format(output))
-
 
     @commands.command(hidden=True)
     async def socketstats(self, ctx):
@@ -82,12 +83,16 @@ class Stats:
     @commands.command(pass_context=True)
     async def uptime(self, ctx):
         """Tells you how long the bot has been up for."""
-        em = discord.Embed(title="Local time", description=str(datetime.datetime.utcnow())[:-7], colour=0x14e818)
-        em.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar_url)
-        em.add_field(name="Current uptime", value=self.get_bot_uptime(brief=True), inline=True)
-        em.add_field(name="Start time", value=str(self.bot.uptime)[:-7], inline=True)
+        em = discord.Embed(title="Local time", description=str(
+            datetime.datetime.utcnow())[:-7], colour=0x14e818)
+        em.set_author(name=self.bot.user.name,
+                      icon_url=self.bot.user.avatar_url)
+        em.add_field(name="Current uptime",
+                     value=self.get_bot_uptime(brief=True), inline=True)
+        em.add_field(name="Start time", value=str(
+            self.bot.uptime)[:-7], inline=True)
         await ctx.send(embed=em)
-        #await ctx.send('Uptime: **{}**'.format(self.get_bot_uptime()))
+        # await ctx.send('Uptime: **{}**'.format(self.get_bot_uptime()))
 
     @commands.command(aliases=['stats'])
     async def about(self, ctx):
@@ -95,14 +100,13 @@ class Stats:
         embed.title = 'About:'
         embed.colour = 0x738bd7
 
-
         owner = self.bot.get_user(self.bot.owner_id)
-        
 
         embed.set_author(name=str(owner), icon_url=owner.avatar_url)
 
         total_members = sum(1 for _ in self.bot.get_all_members())
-        total_online = len({m.id for m in self.bot.get_all_members() if m.status is discord.Status.online})
+        total_online = len(
+            {m.id for m in self.bot.get_all_members() if m.status is discord.Status.online})
         total_unique = len(self.bot.users)
 
         voice_channels = []
@@ -114,25 +118,29 @@ class Stats:
         text = len(text_channels)
         voice = len(voice_channels)
 
-        embed.add_field(name='Members', value=f'{total_members} total\n{total_unique} unique\n{total_online} unique online')
-        embed.add_field(name='Channels', value=f'{text + voice} total\n{text} text\n{voice} voice')
+        embed.add_field(
+            name='Members', value=f'{total_members} total\n{total_unique} unique\n{total_online} unique online')
+        embed.add_field(
+            name='Channels', value=f'{text + voice} total\n{text} text\n{voice} voice')
 
         memory_usage = self.process.memory_full_info().uss / 1024**2
         cpu_usage = self.process.cpu_percent() / psutil.cpu_count()
-        embed.add_field(name='Process', value=f'{memory_usage:.2f} MiB\n{cpu_usage:.2f}% CPU')
-
+        embed.add_field(
+            name='Process', value=f'{memory_usage:.2f} MiB\n{cpu_usage:.2f}% CPU')
 
         embed.add_field(name='Guilds', value=len(self.bot.guilds))
-        embed.add_field(name='Commands Run', value=sum(self.bot.command_stats.values()))
+        embed.add_field(name='Commands Run', value=sum(
+            self.bot.command_stats.values()))
         embed.add_field(name='Uptime', value=self.get_bot_uptime(brief=True))
-        embed.set_footer(text='Made with 💖 with discord.py', icon_url='http://i.imgur.com/5BFecvA.png')
+        embed.set_footer(text='Made with 💖 with discord.py',
+                         icon_url='http://i.imgur.com/5BFecvA.png')
         await ctx.send(embed=embed)
-
 
     async def send_guild_stats(self, e, guild):
         e.add_field(name='Name', value=guild.name)
         e.add_field(name='ID', value=guild.id)
-        e.add_field(name='Owner', value=f'{guild.owner} (ID: {guild.owner.id})')
+        e.add_field(
+            name='Owner', value=f'{guild.owner} (ID: {guild.owner.id})')
 
         bots = sum(m.bot for m in guild.members)
         total = guild.member_count
@@ -151,11 +159,11 @@ class Stats:
         await ch.send(embed=e)
 
     async def on_guild_join(self, guild):
-        e = discord.Embed(colour=0x53dda4, title='New Guild') # green colour
+        e = discord.Embed(colour=0x53dda4, title='New Guild')  # green colour
         await self.send_guild_stats(e, guild)
 
     async def on_guild_remove(self, guild):
-        e = discord.Embed(colour=0xdd5f53, title='Left Guild') # red colour
+        e = discord.Embed(colour=0xdd5f53, title='Left Guild')  # red colour
         await self.send_guild_stats(e, guild)
 
     async def on_command_error(self, ctx, error):
@@ -176,13 +184,16 @@ class Stats:
 
         e.add_field(name='Location', value=fmt, inline=False)
 
-        exc = ''.join(traceback.format_exception(type(error), error, error.__traceback__, chain=False))
+        exc = ''.join(traceback.format_exception(
+            type(error), error, error.__traceback__, chain=False))
         e.description = f'```py\n{exc}\n```'
         e.timestamp = datetime.datetime.utcnow()
         ch = self.bot.get_channel(LOGGING_CHANNEL)
         await ch.send(embed=e)
 
+
 old_on_error = commands.Bot.on_error
+
 
 async def on_error(self, event, *args, **kwargs):
     e = discord.Embed(title='Event Error', colour=0xa32952)
@@ -195,6 +206,7 @@ async def on_error(self, event, *args, **kwargs):
     except:
         pass
 
+
 def setup(bot):
     if not hasattr(bot, 'command_stats'):
         bot.command_stats = Counter()
@@ -204,6 +216,7 @@ def setup(bot):
 
     bot.add_cog(Stats(bot))
     commands.Bot.on_error = on_error
+
 
 def teardown(bot):
     commands.Bot.on_error = old_on_error

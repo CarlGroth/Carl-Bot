@@ -915,9 +915,8 @@ legendaries = [
 ]
 
 
-
 class StatTrak:
-    
+
     def __init__(self, bot):
         self.bot = bot
         self.conn = sqlite3.connect('database.db')
@@ -925,12 +924,11 @@ class StatTrak:
         self.c.execute('''CREATE TABLE IF NOT EXISTS messages
              (unix real, timestamp timestamp, content text, id text, author text, channel text, server text)''')
 
-
-
     def fix_postcount(self, message):
         if message.channel == discord.ChannelType.private:
             return
-        self.c.execute('UPDATE users SET postcount = postcount + 1 WHERE (id=? AND server=?)', (message.author.id, message.guild.id))
+        self.c.execute('UPDATE users SET postcount = postcount + 1 WHERE (id=? AND server=?)',
+                       (message.author.id, message.guild.id))
         self.conn.commit()
 
     # @commands.group(pass_context=True, invoke_without_command=True)
@@ -954,17 +952,20 @@ class StatTrak:
     #     await ctx.send(file=xd)
 
     @commands.group(name="postcount", aliases=['pc'], invoke_without_command=True)
-    async def pc(self, ctx, member : discord.Member = None):        
+    async def pc(self, ctx, member: discord.Member = None):
         user = ctx.author if member is None else member
-        a = self.c.execute('SELECT * FROM users WHERE (server=? AND id=?)', (ctx.guild.id, user.id))
+        a = self.c.execute(
+            'SELECT * FROM users WHERE (server=? AND id=?)', (ctx.guild.id, user.id))
         a = a.fetchall()[0]
         await ctx.send("**{}** has posted **{}** messages.".format(user.name, a[5]))
 
     @pc.command(name="top", pass_context=True)
     async def postcounttop(self, ctx):
-        a = self.c.execute('SELECT * FROM users WHERE (server=? AND postcount > 0) ORDER BY postcount DESC LIMIT 20', (ctx.guild.id,))
+        a = self.c.execute(
+            'SELECT * FROM users WHERE (server=? AND postcount > 0) ORDER BY postcount DESC LIMIT 20', (ctx.guild.id,))
         a = a.fetchall()
-        b = self.c.execute('SELECT SUM(postcount) AS "hello" FROM users WHERE (server=? AND postcount > 0)', (ctx.guild.id,))
+        b = self.c.execute(
+            'SELECT SUM(postcount) AS "hello" FROM users WHERE (server=? AND postcount > 0)', (ctx.guild.id,))
         b = b.fetchone()[0]
         print(b)
         post_this = ""
@@ -973,72 +974,90 @@ class StatTrak:
             name = f'<@{row[3]}>'
             post_this += ("{}. {} : {}\n".format(rank, name, row[5]))
             rank += 1
-        post_this += "\n**{0}** posts by **{1}** chatters.".format(b,len([x for x in ctx.guild.members]))
-        em = discord.Embed(title="Current standings:", description=post_this, colour=0x14e818)
-        em.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar_url)
+        post_this += "\n**{0}** posts by **{1}** chatters.".format(
+            b, len([x for x in ctx.guild.members]))
+        em = discord.Embed(title="Current standings:",
+                           description=post_this, colour=0x14e818)
+        em.set_author(name=self.bot.user.name,
+                      icon_url=self.bot.user.avatar_url)
         await ctx.send(embed=em)
 
-
-
     async def on_member_join(self, member):
-        a = self.c.execute('SELECT * FROM users WHERE (id=? AND server=?)', (member.id, member.guild.id))
+        a = self.c.execute(
+            'SELECT * FROM users WHERE (id=? AND server=?)', (member.id, member.guild.id))
         a = a.fetchall()
         if a != []:
             return
-        roles = ','.join([x.id for x in member.roles if (x.name != "@everyone" and x.id != "232206741339766784")])
-        self.c.execute("INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (roles, member.guild.id, None, member.id, member.display_name, 0, 0, 0))
+        roles = ','.join([x.id for x in member.roles if (
+            x.name != "@everyone" and x.id != "232206741339766784")])
+        self.c.execute("INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                       (roles, member.guild.id, None, member.id, member.display_name, 0, 0, 0))
         self.conn.commit()
-        xd = self.c.execute('SELECT * FROM userconfig WHERE (guild_id=? AND user_id=?)', (member.guild.id, member.id))
+        xd = self.c.execute(
+            'SELECT * FROM userconfig WHERE (guild_id=? AND user_id=?)', (member.guild.id, member.id))
         xd = xd.fetchall()
         if xd == []:
-            self.c.execute('INSERT INTO userconfig VALUES (?, ?, ?, ?, ?, ?)', (member.guild.id, member.id, None, None, False, None))
+            self.c.execute('INSERT INTO userconfig VALUES (?, ?, ?, ?, ?, ?)',
+                           (member.guild.id, member.id, None, None, False, None))
             self.conn.commit()
-
 
     async def on_guild_join(self, guild):
         a = self.c.execute('SELECT * FROM servers WHERE id=?', (guild.id,))
         a = a.fetchall()
-        
+
         print(a)
         if a == []:
-            self.c.execute('INSERT INTO servers VALUES (?, ?, ?, ?, ?, ?)', (guild.id, None, None, None, None, '?,!'))
+            self.c.execute('INSERT INTO servers VALUES (?, ?, ?, ?, ?, ?)',
+                           (guild.id, None, None, None, None, '?,!'))
             self.conn.commit()
         b = self.c.execute('SELECT * FROM logging WHERE server=?', (guild.id,))
         b = b.fetchall()
         if b == []:
-            self.c.execute('INSERT INTO logging VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', (guild.id, 1, 1, 1, 1, 1, 1, 1, None))
+            self.c.execute('INSERT INTO logging VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                           (guild.id, 1, 1, 1, 1, 1, 1, 1, None))
+            self.conn.commit()
+
+        self.c.execute('SELECT * FROM role_config WHERE guild_id=?', (guild.id,))
+        role_config_table = self.c.fetchall()
+        if role_config_table == []:
+            self.c.execute('''INSERT INTO role_config
+                            VALUES (?, ?, ?)''',
+                        (None, False, guild.id))
             self.conn.commit()
         for member in guild.members:
-            a = self.c.execute('SELECT * FROM users WHERE (id=? AND server=?)', (member.id, member.guild.id))
+            a = self.c.execute(
+                'SELECT * FROM users WHERE (id=? AND server=?)', (member.id, member.guild.id))
             a = a.fetchall()
             if a != []:
                 continue
-            roles = ','.join([x.id for x in member.roles if x.name != "@everyone"])
-            self.c.execute("INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (roles, member.guild.id, None, member.id, member.display_name, 0, 0, 0))
+            roles = ','.join(
+                [x.id for x in member.roles if x.name != "@everyone"])
+            self.c.execute("INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                           (roles, member.guild.id, None, member.id, member.display_name, 0, 0, 0))
             self.conn.commit()
-
-
 
     async def on_message(self, message):
         print(random.randint(1, 10000))
         if (random.randint(1, 10000) == 1 and message.guild.id == 207943928018632705):
-            legendaryRole = discord.utils.get(message.guild.roles, name='Legendary')
+            legendaryRole = discord.utils.get(
+                message.guild.roles, name='Legendary')
             await message.author.add_roles(legendaryRole)
             await message.channel.send("{} just received a legendary item: **{}**".format(message.author.mention, random.choice(legendaries)))
         if (random.randint(1, 5000) == 1 and message.channel.id == 251064728795873281):
             quality = random.randint(1, 6)
-            legendaryRole = discord.utils.get(message.guild.roles, name='Unique')
+            legendaryRole = discord.utils.get(
+                message.guild.roles, name='Unique')
             await message.author.add_roles(legendaryRole)
             await message.channel.send("{} You found a unique, exile. It's a **{}l {}**".format(message.author.mention, quality, random.choice(uniques)))
         if message.guild is None:
             return
-        self.fix_postcount(message)        
+        self.fix_postcount(message)
         if message.content == "":
-            return            
-        self.c.execute("INSERT INTO messages VALUES (?, ?, ?, ?, ?, ?, ?)", (message.created_at.timestamp(), message.created_at.strftime(dt_format), message.clean_content, message.id, message.author.id, message.channel.id, message.guild.id))
+            return
+        self.c.execute("INSERT INTO messages VALUES (?, ?, ?, ?, ?, ?, ?)", (message.created_at.timestamp(), message.created_at.strftime(
+            dt_format), message.clean_content, message.id, message.author.id, message.channel.id, message.guild.id))
         self.conn.commit()
 
 
 def setup(bot):
     bot.add_cog(StatTrak(bot))
-    

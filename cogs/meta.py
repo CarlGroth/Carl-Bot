@@ -1,6 +1,8 @@
 import discord
-import os, datetime
-import re, asyncio
+import os
+import datetime
+import re
+import asyncio
 import copy
 import math
 import unicodedata
@@ -16,11 +18,13 @@ from cogs.utils.formats import Plural
 
 ctx_tick = ("<:redtick:318044813444251649>", "<:greentick:318044721807360010>")
 
+
 class Prefix(commands.Converter):
     async def convert(self, ctx, argument):
         user_id = ctx.bot.user.id
         if argument.startswith((f'<@{user_id}>', f'<@!{user_id}>')):
-            raise commands.BadArgument('That is a reserved prefix already in use.')
+            raise commands.BadArgument(
+                'That is a reserved prefix already in use.')
         return argument
 
 
@@ -28,9 +32,11 @@ def load_json(filename):
     with open(filename, encoding='utf-8') as infile:
         return json.load(infile)
 
+
 def write_json(filename, contents):
     with open(filename, 'w') as outfile:
         json.dump(contents, outfile, indent=4)
+
 
 def blizzard_time(dt):
     delta = dt
@@ -61,17 +67,10 @@ def blizzard_time(dt):
     return '%s' % Plural(second=seconds)
 
 
-        
-
 class Meta:
     def __init__(self, bot):
         self.bot = bot
-        self.remindme = load_json('remindme.json')
 
-    
-
-
-    
     @commands.group(name='prefix', invoke_without_command=True)
     async def prefix(self, ctx):
         """Manages the server's custom prefixes.
@@ -89,8 +88,10 @@ class Meta:
 
         e = discord.Embed(title='Prefixes', colour=discord.Colour.blurple())
         e.set_footer(text=f'{len(prefixes)} prefixes')
-        e.description = '\n'.join(f'{index}. {elem}' for index, elem in enumerate(prefixes, 1))
+        e.description = '\n'.join(
+            f'{index}. {elem}' for index, elem in enumerate(prefixes, 1))
         await ctx.send(embed=e)
+
     @prefix.command(name='add', ignore_extra=False)
     @checks.admin_or_permissions(manage_server=True)
     async def prefix_add(self, ctx, prefix: Prefix):
@@ -99,7 +100,7 @@ class Meta:
         if "@here" in prefix:
             return ctx.send("Fuck off.")
         if "," in prefix:
-            return ctx.send("No commas, I'm lazy.") 
+            return ctx.send("No commas, I'm lazy.")
 
         current_prefixes = self.bot.get_raw_guild_prefixes(ctx.guild.id)
         current_prefixes.append(prefix)
@@ -118,13 +119,6 @@ class Meta:
     @prefix.command(name='remove', aliases=['delete'], ignore_extra=False)
     @checks.admin_or_permissions(manage_server=True)
     async def prefix_remove(self, ctx, prefix: Prefix):
-        """Removes a prefix from the list of custom prefixes.
-
-        This is the inverse of the 'prefix add' command. You can
-        use this to remove prefixes from the default set as well.
-
-        You must have Manage Server permission to use this command.
-        """
 
         current_prefixes = self.bot.get_raw_guild_prefixes(ctx.guild.id)
 
@@ -143,24 +137,17 @@ class Meta:
     @prefix.command(name='clear')
     @checks.admin_or_permissions(manage_server=True)
     async def prefix_clear(self, ctx):
-        """Removes all custom prefixes.
-
-        After this, the bot will listen to only mention prefixes.
-
-        You must have Manage Server permission to use this command.
-        """
 
         await self.bot.set_guild_prefixes(ctx.guild, [])
         await ctx.send('ALL prefixes removed, you need to mention me to set a new one.')
 
-
     @commands.command(name='define', aliases=['d'], no_pm=True)
-    async def _definitions(self, ctx, *, word : str):
+    async def _definitions(self, ctx, *, word: str):
         language = 'en'
         user = ctx.author
         url = 'https://od-api.oxforddictionaries.com/api/v1/entries/en/' + word.lower()
         async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers = {'app_id': '3177862a', 'app_key': 'TOKEN'}) as r:
+            async with session.get(url, headers={'app_id': '3177862a', 'app_key': 'token fuck off'}) as r:
                 try:
                     jsonthing = await r.json()
                 except Exception as e:
@@ -168,8 +155,10 @@ class Meta:
                     return
         actual_word = word.capitalize()
         pronounciation = jsonthing["results"][0]["lexicalEntries"][0]["pronunciations"][0]["phoneticSpelling"]
-        e = discord.Embed(title=actual_word, description="/{}/".format(pronounciation), color=0x738bd7)
-        e.set_author(name=user.name, icon_url=user.avatar_url, url=user.avatar_url)
+        e = discord.Embed(
+            title=actual_word, description="/{}/".format(pronounciation), color=0x738bd7)
+        e.set_author(name=user.name, icon_url=user.avatar_url,
+                     url=user.avatar_url)
         try:
             x = jsonthing["results"][0]["lexicalEntries"]
         except Exception as e:
@@ -184,42 +173,49 @@ class Meta:
             except:
                 continue
             d = ''.join(d)
-            definition = "{}\n".format( ''.join(i["entries"][0]["senses"][0]["definitions"]))
+            definition = "{}\n".format(
+                ''.join(i["entries"][0]["senses"][0]["definitions"]))
             try:
                 if i["entries"][0]["senses"][0]["examples"] is not None:
                     examplestring = ""
                     for example in i["entries"][0]["senses"][0]["examples"]:
-                        examplestring += "  \"*{}*\"\n".format(''.join(example["text"]))
+                        examplestring += "  \"*{}*\"\n".format(
+                            ''.join(example["text"]))
             except KeyError:
                 examplestring = ""
             try:
-                definitions[word_type] += "1. {}{}\n".format(definition.capitalize(), examplestring)
+                definitions[word_type] += "1. {}{}\n".format(
+                    definition.capitalize(), examplestring)
                 examplestring = ""
             except KeyError:
-                definitions[word_type] = "1. {}{}\n".format(definition.capitalize(), examplestring)
+                definitions[word_type] = "1. {}{}\n".format(
+                    definition.capitalize(), examplestring)
                 examplestring = ""
             try:
                 if x[f]["entries"][0]["senses"][0]["subsenses"] is not None:
                     whole_thing = x[f]["entries"][0]["senses"][0]["subsenses"]
                     for n, subsense in enumerate(whole_thing):
-                        subsense = "{}\n".format( ''.join(subsense["definitions"]))
+                        subsense = "{}\n".format(
+                            ''.join(subsense["definitions"]))
                         try:
-                            definitions[word_type] += "{}. {}".format(n+2, subsense.capitalize())
+                            definitions[word_type] += "{}. {}".format(
+                                n + 2, subsense.capitalize())
                         except KeyError:
-                            definitions[word_type] = "{}. {}".format(n+2, subsense.capitalize())
+                            definitions[word_type] = "{}. {}".format(
+                                n + 2, subsense.capitalize())
             except KeyError:
                 pass
             f += 1
         for box in definitions:
             e.add_field(name=box, value=definitions[box], inline=False)
         try:
-            destination = discord.utils.find(lambda m: "bot" in m.name, ctx.guild.channels)
+            destination = discord.utils.find(
+                lambda m: "bot" in m.name, ctx.guild.channels)
             xd = await destination.send(ctx.author.mention)
-            
+
         except:
             destination = ctx.message.channel
         await ctx.send(embed=e)
-
 
     @commands.command()
     async def charinfo(self, ctx, *, characters: str):
@@ -240,9 +236,6 @@ class Meta:
             return fmt.format(digit, name, c)
 
         await ctx.send('\n'.join(map(to_string, characters)))
-
-
-    
 
     @commands.command(name='serverinfo', pass_context=True, no_pm=True)
     async def server_info(self, ctx):
@@ -298,13 +291,14 @@ class Meta:
               '<:away:346921747330891780> {} ' \
               '<:dnd:346921781786836992> {} ' \
               '<:offline:346921814435430400> {}\n' \
-              'Total: {}'.format(member_by_status["online"], member_by_status["idle"], member_by_status["dnd"], member_by_status["offline"], guild.member_count)
+              'Total: {}'.format(member_by_status["online"], member_by_status["idle"],
+                                 member_by_status["dnd"], member_by_status["offline"], guild.member_count)
 
         e.add_field(name='Members', value=fmt)
-        e.add_field(name='Roles', value=', '.join(roles) if len(roles) < 10 else f'{len(roles)} roles')
+        e.add_field(name='Roles', value=', '.join(roles)
+                    if len(roles) < 10 else f'{len(roles)} roles')
         e.set_footer(text='Created').timestamp = guild.created_at
         await ctx.send(embed=e)
-
 
     async def say_permissions(self, ctx, member, channel):
         permissions = channel.permissions_for(member)
@@ -322,7 +316,7 @@ class Meta:
         await ctx.send(embed=e)
 
     @commands.command(pass_context=True, no_pm=True)
-    async def permissions(self, ctx, *, member : discord.Member = None):
+    async def permissions(self, ctx, *, member: discord.Member = None):
         """Shows a member's permissions.
 
         You cannot use this in private messages. If no member is given then
@@ -366,8 +360,6 @@ class Meta:
         perms.view_audit_log = True
         await ctx.send(discord.utils.oauth_url(self.bot.client_id, perms))
 
-
-
     @commands.command(hidden=True)
     async def cud(self):
         """pls no spam"""
@@ -377,6 +369,7 @@ class Meta:
             await asyncio.sleep(1)
 
         await ctx.send('go')
+
     @commands.command(pass_context=True)
     async def help(self, ctx):
         url = r"https://github.com/CarlGroth/Carl-Bot/blob/master/readme.md"
