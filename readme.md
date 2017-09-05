@@ -66,7 +66,7 @@ Banning a user from a specific command bans them from using any subcommand for t
 
 Ban a user from using a specific subcommand `!plonk <@user> <command> <subcommand>`
 
-This ONLY disables the subcommand, disabling `!temp home` means `!temp` still works etc. If you specify a tag alias it will automatically convert it to the actual command name.
+This ONLY disables the subcommand, disabling `!temp home` means `!temp` still works etc. If you specify a command alias it will automatically convert it to the actual command name.
 
 Display all plonked users by typing `!plonks`
 
