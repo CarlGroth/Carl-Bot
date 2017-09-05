@@ -61,25 +61,38 @@ Ban using `!plonk <@user>`
 Unban using `!plonk <@user>`
 
 Ban a user from using a specific command `!plonk <@user> <command>`
+
 Banning a user from a specific command bans them from using any subcommand for that as well (`!temp` means you can't use `!temp home` etc.)
+
+Ban a user from using a specific subcommand `!plonk <@user> <command> <subcommand>`
+
+This ONLY disables the subcommand, disabling `!temp home` means `!temp` still works etc. If you specify a tag alias it will automatically convert it to the actual command name.
 
 Display all plonked users by typing `!plonks`
 
-
+Display disabled commands per user by typing `!plonks <@user>`
 
 ### Disabling commands per command
 
 `!disable <command>`
 For example: `!disable remindme` 
 
-Will disable the remindme command for all users unless they have manage roles
+Will disable the remindme command for all users unless they have manage server
+
+`!disable <command> <subcommand>`
+
+For example: `!disable role whitelist`
+
+Will disable `!role whitelist` while still allowing users to use `!role`. Works for aliases.
+
+
 ### Disabling all commands
 
 Either use `!disable all`
 Which will add all commands to the blacklist (this means that any future commands won't be blacklisted)
 or use `!disable server`
 Which will actually disable the server from having any command registered (manage server bypasses this)
-### Disabling commands per channel
+### Disabling a channel
 
 `!ignore #channel` or `!ignore all`
 
@@ -87,6 +100,12 @@ Disables ALL commands from being used in the mentioned channel (unless you have 
 `!unignore #channel` or `!unignore all`
 
 Enables ALL commands from being used in the mentioned channel (unless you have manage roles).
+
+### Disabling commands and sub commands per channel
+
+`!ignore #channel <command> [<subcommand>]`
+
+Works the same as the other disablers, subcommands will only block the specified subcommand (and all aliases) while blocking the command will block the command and all subcommands.
 
 ## Tags
 Tags are server-specific and case insensitive
@@ -118,6 +137,12 @@ Tag names can be two words, use double quotes for this
 In addition to these you can use `%nuser, %nauthor and %mention` which will return the discord name instead of their nickname.
 
 `{{arg1, arg2, arg3}}` Enclosing comma separated words with double curly brackets will choose one at random. Supports having more than one list per tag and can contain the variables listed above.
+
+You can also add variables/custom args with `$1, $2, $3` etc. These variables will be replaced with your words after `!command <tagname>`.
+
+You can set a default value to these variables by typing `$1="your thing here"`
+
+By using double quotes you can add multiple words at once. It also supports things like random lists, %author and pretty much everything you can think of. Emojis need to be enclosed in quotes and you can't set a variable default to equal another variable.
 
 #### Appending tags
 `!tag += <tagname> <tag content>`
@@ -169,6 +194,54 @@ Removes all tags associated with that user
 `!tag search/!tagsearch/commands <search query>`
 
 Searches for matches, reply with numbers to print the tag
+
+## Roles
+
+CarlBot supports fairly basic role assignments.
+
+### Getting a role
+
+`!role <role>` where `<role>` can be an id, a role mention or just the name (case insensitive, but special characters appear broken)
+
+### Whitelisting a role
+
+For users to be able to give themselves roles, you first need to whitelist the role.
+In order to whitelist a role, three things must be true:
+
+1. You have the manage roles permission
+
+2. You're high enough in the role hierarchy that you can assign the role
+
+3. The bot can assign the role
+
+`!role whitelist <role>`
+
+### Making roles unique
+
+Some servers will want you to only have one assignable role, Carlbot can handle this.
+
+`!role unique` - requires manage server. This makes it so that any role Carlbot assigns will replace all other whitelisted roles.
+
+
+## Highlights
+
+Inspired by highlight bot, Carlbot now also does highlighting.
+Highlighting means you will receive a message when your keyword is said in chat. The matching is approximate and works really similarly to discord search (basically, if you search your keyword in discord search, you will find messages that would trigger the highlight, roughly speaking). It will only notify you if you haven't posted anything in chat for the past 10 minutes (prone to change). Generally doesn't seem to have too many false positives.
+
+### Adding words to be highlighted
+`!hl add <word>` - adds a word that will notify you
+
+### (un)Blocking a user or channel from highlighting you
+`!hl block <@/#mention>` - messages sent in this channel/from this user won't notify you
+
+`!hl unblock <@/#mention>` - unblock the user/channel
+### Listing your highlighted words
+`!hl show` - Shows your words as the bot sees them, if your words look wrong ("barri" instead of "barry" for instance) it's because of [word stemming](https://en.wikipedia.org/wiki/Stemming)
+
+### Removing a highlighted word
+`!hl del <word>`
+### Removing all highlighted words
+`!hl clear`
 
 ## Bio
 
