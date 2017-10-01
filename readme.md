@@ -1,405 +1,278 @@
-\* = optional argument
+# Commands
 
-^ = bot owner only
+How do I read this? 
 
-## Prefixes
-#### Displaying all prefixes for the server
-`!prefix` (defaults to mentioning the bot, ! and ?)
-#### Adding a prefix
-`!prefix add <prefix>`
-If your prefix has a space at the end, enclose it in double quotes.
+Args are what goes after the command, in `!temp home stockholm` "stockholm" is the args, in `!tag create test Hello World` "test" is the first arg and "Hello world" is the second. If an argument is in [square brackets] it means that it's optional.
 
-#### Removing a prefix
-`!prefix remove <prefix>`
-#### Clearing all prefixes
-`!prefix clear`
+An alias is another way to call a command. For instance, `temp` and `weather` function identically. A caret (^) means that the command requires manage server to be used.
+
+
+
+## Bot Prefix
+
+|Name|Aliases   |Args   |Example   |Usage
+|---|---|---|---|---|
+|!prefix   |--   |--   |--   |Lists the affixes currently in use by the server   |
+|^!prefix add   |--   |prefix   |!prefix add "sudo "   |Adds a prefix to be used by the bot (limited to 10) **NOTE** if you want a two word prefix or a prefix with a space after it or an emoji you **must** use quotes, this is a discord limitation and can't be fixed   |
+|^!prefix remove   |delete   |prefix   |!prefix remove !   |Removes a prefix, same limits as !prefix add applies here, can't remove mentioning the bot.   |
+|^!prefix clear   |--   |--   |--   |Removes all prefixes except mentioning the bot. This (obviously) means you need to mention the bot to register more prefixes   |
+
 ## Logging
 
-### Deciding what gets logged
+[Here's a screenshot showing how logging looks](https://i.imgur.com/bD5woF0.png)
 
-#### !log
-syntax is `!log <event>` where event can be either of:
+|Name|Aliases   |Args   |Example   |Usage
+|---|---|---|---|---|
+|^!set log  |--   |channel   |!set log #bot_logs   |Choose where the bot logs things to    |
+|^!set twitch   |--   |channel   |!set twitch #couch   |Choose which channel the bot announces twitch streams to   |
+|^!set bot   |--   | channel   |!set bot #bot-abuse   |Choose which channel restricted commands/tags go to   |
+|^!config   |--   |--   |--   |Shows what the bot logs, what channels it doesn't log from, channels it ignores commands from, disabled commands, banned users, logging channel, twitch channel and prefixes   |
+|^!log avatar  |--   |--   |--   |Sets logging avatar changes to true or false depending on what it currently is   |
+|^!log edit  |--   |--   |--   |Sets logging message edits to true or false   |
+|^!log role  |--   |--   |--   |Sets logging role updates to true or false   |
+|^!log delete  |--   |--   |--   |Sets logging message deletions to true or false   |
+|^!log ban  |--   |--   |--   |Sets logging server bans to true or false   |
+|^!log join  |--   |--   |--   |Sets logging members joining/leaving to true or false depending on what it currently is   |
+|^!log name  |--   |--   |--   |Sets logging name changes to true or false depending on what it currently is   |
+|^!log ignore   |--   |[channel]   |--   |Makes the bot ignore message edits/deletions from the channel. This is useful if you have a public log but private channels.   |
+|^!log unignore   |--   |[channel]   |--   |Unignores previously ignored channels   |
 
-**avatar, edit, role, delete, ban, join, name**
+## Bot Moderation
 
-For example, to disable logging message edits you would type `!log edits`. It will swap to true or false depending on the current setting 
-#### !log ignore/unignore
-Syntax is `!log ignore <channel mention(s)>`
+While Carlbot doesn't provide any commands to ban/purge/mute users, it offers exceptional tools to prevent abuse and restrict commands from troublemakers.
 
-will ignore message edits/deletions from the mentioned channels
-
-replace `ignore` with `unignore` to unignore a channel
-
-### Deciding where the log is shown
-
-`!set log #channel`
-
-### Deciding where twitch streams are announced
-
-`!set twitch #channel`
-
-### Adding a twitch stream
-Requires "Manage Server"
-`!twitch <twitch name> *<announcement text>`
-
-Twitch name is the name of their channel
-
-Announcement text is what the bot will say in addition to the embed when the stream goes live, defaults to their twitch name.
-(warning: this can contain @everyone by design)
-
-### Deleting a twitch stream
-Requires "Manage Server"
-`!twitch <twitch name>`
-
-## Bot moderation
-
-### Banning a user from using the bot
-These all require "manage server" to work
-
-Ban using `!plonk <@user>`
-
-Unban using `!plonk <@user>`
-
-Ban a user from using a specific command `!plonk <@user> <command>`
-
-Banning a user from a specific command bans them from using any subcommand for that as well (`!temp` means you can't use `!temp home` etc.)
-
-Ban a user from using a specific subcommand `!plonk <@user> <command> <subcommand>`
-
-This ONLY disables the subcommand, disabling `!temp home` means `!temp` still works etc. If you specify a command alias it will automatically convert it to the actual command name.
-
-Display all plonked users by typing `!plonks`
-
-Display disabled commands per user by typing `!plonks <@user>`
-
-### Disabling commands per command
-
-`!disable <command>`
-For example: `!disable remindme` 
-
-Will disable the remindme command for all users unless they have manage server
-
-`!disable <command> <subcommand>`
-
-For example: `!disable role whitelist`
-
-Will disable `!role whitelist` while still allowing users to use `!role`. Works for aliases.
-
-
-### Disabling all commands
-
-Either use `!disable all`
-Which will add all commands to the blacklist (this means that any future commands won't be blacklisted)
-or use `!disable server`
-Which will actually disable the server from having any command registered (manage server bypasses this)
-### Disabling a channel
-
-`!ignore #channel` or `!ignore all`
-
-Disables ALL commands from being used in the mentioned channel (unless you have manage roles)
-`!unignore #channel` or `!unignore all`
-
-Enables ALL commands from being used in the mentioned channel (unless you have manage roles).
-
-### Disabling commands and sub commands per channel
-
-`!ignore #channel <command> [<subcommand>]`
-
-Works the same as the other disablers, subcommands will only block the specified subcommand (and all aliases) while blocking the command will block the command and all subcommands.
+|Name|Aliases   |Args   |Example   |Usage
+|---|---|---|---|---|
+|^!ignore   |--   | [channel] [command] [subcommand]   |!ignore #general temp home   |If no channel is specified, the current channel is ignored. If no command is specified, the mentioned channel will be ignored. If only a command is supplied, the command and all of its subcommands will be ignored in the specified channel. If everything is supplied, only the subcommand will be ignored in the specified channel. Mod (manage server) will bypass all of these.   |
+|^!ignore server   | --  |--   |--   | This will ignore all channels and is future-proof.    |
+|^!ignore all   |--   |[command] [subcommand]   |!ignore all sicklad top   |This is equal to typing !ignore channel command subcommand in all channels the bot can see, useful if you want to ignore a command in all channels except for one. This will not work for channels created in the future. If the command is already ignored in a channel, this will unignore it.  |
+|^!unignore all   | --  | --   | --  | Unignores all channels (this does not take ignored commands into account)   |
+|^!disable   |--   | command [subcommand]  | !disable retard top  |This really disables the command globally from the server, not even manage server bypasses this.    |
+|^!enable   |--   |--   |!enable retard top   |Enables a previously disabled command.   |
+|^!enable all   |--   |--   |--   |Sets all commands to enabled.   |
+|^!disable all   |--   |--   |--   |Sets all commands to disabled.  |
+|!enable list | disable list | -- | -- | Shows all enabled/disabled commands.|
+|^!plonk   |--   |member [command][subcommand]   |!plonk @Carl#0080 tag create   |This works almost exactly like !ignore but for users instead. If no command is specified, the user is banned from using the bot completely.   |
+|^!unplonk  |--   |member [command][subcommand]    |!unplonk @Carl#0080   |Unbans the user from using the bot   |
+|!plonks   |--   |--   |--   |Displays all plonked users.   |
+|^!restrict   |--   |command [subcommand]   |!restrict define   |This requires a bot channel to utilize. Makes it so that if the command is used outside of the bot channel, the bot will ping the user in the botchannel and give the results there instead.   |
+|^!unrestrict   |--   |command [subcommand]   |!unrestrict d   | Unrestricts it. Like all commands where you pass in a command, aliases work just as well.   |
 
 ## Tags
-Tags are server-specific and case insensitive
 
-#### Accessing a tag
-Just use `!<tagname>` multiple words are supported.
-#### Creating tags
-`!tag +/create/add <tagname> <tag content>`
+Tags can be complicated, see [the full section](#Tags) for a more thorough explanation with advanced usage.
 
-Tag names can be two words, use double quotes for this
+|Name|Aliases   |Args   |Example   |Usage
+|---|---|---|---|---|
+|!tag   |tag get   |lookup   |!classdiscords   |This is how you get tags after they're saved.   |
+|!tag create   |add, +    |tagname tagcontent   |!tag + test Hello world   |Makes a tag named test with the content Hello world.   |
+|^!tag ++   |--   |A pastebin link   |--   | Since tags can have an output shorter than their length, using !tag ++ allows you to make them  |
+|!tag append   |+=   |tagname tagcontent   |!tag += test and my mom   |Adds tagcontent to an already existing tag   |
+|!tag alias   | a  |alias tagname   |!tag alias testing test   | Creates a link to an already existing tag, changes made to the original tag means the aliased tag will also be changed. The name you want for the alias is the first argument, the already existing tag is the second.  |
+|!tag edit   |e   |tagname tagcontent   |!tag e test bye world   |Edits the content of an already existing tag.   |
+|^!tag nsfw   |--   |tagname   |!tag nsfw test   |Restricts the tag so that it can only be used in channels marked as nsfw   |
+|^!tag restrict   |--   |tagname   |!tag restrict test   |To prevent big tags cluttering your chatty channels, this will make the bot post the content in the bot-channel and ping the author.   |
+|^!tag mod   |--   |tagname   |!tag mod test   |Makes it so that only mods can use the command (manage server)   |
+|!tag stats   |--   |[member]   |!tag stats @Carl#0080   |Shows information about the servers tags (uses, top 3, total number of tags). If you mention someone, it will show their tags instead.   |
+|!tag info   |--   | tagname  |!tag info test   | Shows some stats collected about the tag, uses, creation date, last update, owner.  |
 
-**Examples:**
-
-`!tag + 3ball :8ball::8ball::8ball:`
-
-`!tag + "hey there" I'm a two-word tag!`
-
-### Advanced tag usage
-`%user` - Nickname of the mentioned user or the author if nobody is mentioned.
-
-`%channel` - Name of the mentioned channel or the channel the command was invoked in if there are no mentions.
-
-`%server` - Name of the server.
-
-`%author` - Nickname of the person who used the command (not the one who created it).
-
-`%mention` - Nickname of the first mentioned user or NOTHING if there's no mention.
-
-In addition to these you can use `%nuser, %nauthor and %mention` which will return the discord name instead of their nickname.
-
-`{{arg1, arg2, arg3}}` Enclosing comma separated words with double curly brackets will choose one at random. Supports having more than one list per tag and can contain the variables listed above.
-
-You can also add variables/custom args with `$1, $2, $3` etc. These variables will be replaced with your words after `!command <tagname>`.
-
-You can set a default value to these variables by typing `$1="your thing here"`
-
-By using double quotes you can add multiple words at once. It also supports things like random lists, %author and pretty much everything you can think of. Emojis need to be enclosed in quotes and you can't set a variable default to equal another variable.
-
-#### Appending tags
-`!tag += <tagname> <tag content>`
-Appends <tag content> on a new line to the tag.
-
-**Example:**
-
-`!tag += tankchat http://i.imgur.com/ONtLdiu.png`
-
-#### Removing tags
-`!tag - <tagname>`
-Removes the tag and all aliases.
-**Example:**
-
-`!tag - tankchat`
-
-#### Showing information about a tag
-`!tag info <tagname>`
-
-Shows uses and its ranking on the server compared to other tags
-**Example:**
-`!tag info tankchat`
-#### Showing stats for all tags on a server
-`!tag stats`
-Shows some global and server-specific tag stats
-
-#### Returning all tags someone has created
-`!tag mine *<mention>`
-
-Defaults to yourself, displays all tags you or the user mentioned has created.
-
-#### Returning all tags
-`!taglist/commands/tags`
-
-PMs you all tagnames
-
-#### Retrieving the raw tag content
-`!tag raw <tagname>`
-
-Uses backslash escaping to display **text** as \*\*text\**
-
-#### ^ Removing a user's tags
-`!tag purge *<mention>`
-
-Removes all tags associated with that user
-
-#### Searching for tags (using fuzzy string matching)
-
-`!tag search/!tagsearch/commands <search query>`
-
-Searches for matches, reply with numbers to print the tag
-
-## Roles
-
-CarlBot supports fairly basic role assignments.
-
-### Getting a role
-
-`!role <role>` where `<role>` can be an id, a role mention or just the name (case insensitive, but special characters appear broken)
-
-### Whitelisting a role
-
-For users to be able to give themselves roles, you first need to whitelist the role.
-In order to whitelist a role, three things must be true:
-
-1. You have the manage roles permission
-
-2. You're high enough in the role hierarchy that you can assign the role
-
-3. The bot can assign the role
-
-`!role whitelist <role>`
-
-### Making roles unique
-
-Some servers will want you to only have one assignable role, Carlbot can handle this.
-
-`!role unique` - requires manage server. This makes it so that any role Carlbot assigns will replace all other whitelisted roles.
 
 
 ## Highlights
+Inspired by highlight bot, Carlbot now also does highlighting. Highlighting means you will receive a message when your keyword is said in chat. The matching is approximate and works really similarly to discord search (basically, if you search your keyword in discord search, you will find messages that would trigger the highlight, roughly speaking). It will only notify you if you haven't posted anything in chat for the past 10 minutes (prone to change). Generally doesn't seem to have too many false positives.
 
-Inspired by highlight bot, Carlbot now also does highlighting.
-Highlighting means you will receive a message when your keyword is said in chat. The matching is approximate and works really similarly to discord search (basically, if you search your keyword in discord search, you will find messages that would trigger the highlight, roughly speaking). It will only notify you if you haven't posted anything in chat for the past 10 minutes (prone to change). Generally doesn't seem to have too many false positives.
+|Name|Aliases   |Args   |Example   |Usage
+|---|---|---|---|---|
+|!hl add   |+   |word   |!hl add carl    |Adds a word that will notify you.   |
+|!hl block   |--   |member or channel   |!hl block @Kintark#0588   |Messages sent in this channel/from this user won't notify you.   |
+|!hl unblock   |--   | member or channel  | !hl unblock #general  | Unblocks the user/channel   |
+|!hl show   |--   | --  | --  |  Shows your words as the bot sees them, if your words look wrong ("barri" instead of "barry" for instance) it's because of [word stemming](https://en.wikipedia.org/wiki/Stemming) |
+|!hl clear   |--   | --  | --  | Removes all of your highlighted words  |
+|!hl del   |--   | word  | !hl clear math  | Removes a word from your highlighted words  |
 
-### Adding words to be highlighted
-`!hl add <word>` - adds a word that will notify you
+## Roles
+Very typo proof.
 
-### (un)Blocking a user or channel from highlighting you
-`!hl block <@/#mention>` - messages sent in this channel/from this user won't notify you
+|Name|Aliases   |Args   |Example   |Usage
+|---|---|---|---|---|
+|!role    |--   |role   |!role python   |This will add the role to you if the role is whitelisted. The command is typo proof so "rouge" will match with "rogue".    |
+|!role whitelist   |add, +, -, del, remove, delete   |role   |!role add python   |Adds the role to the whitelist so anyone can assign it to themselves. For this command to work both the bot and the command user needs to be able to assign the role to someone.   |
+|^!role unique   |--   |--   |--   |Makes it so that any roles given will replace any other whitelisted roles. This can be useful for servers where it doesn't make any sense for someone to have multiple roles.   |
+|!roles   |--   |--   |--   |Shows all whitelisted roles   |
 
-`!hl unblock <@/#mention>` - unblock the user/channel
-### Listing your highlighted words
-`!hl show` - Shows your words as the bot sees them, if your words look wrong ("barri" instead of "barry" for instance) it's because of [word stemming](https://en.wikipedia.org/wiki/Stemming)
 
-### Removing a highlighted word
-`!hl del <word>`
-### Removing all highlighted words
-`!hl clear`
+## Timers/reminders
 
-## Bio
+|Name|Aliases   |Args   |Example   |Usage
+|---|---|---|---|---|
+| !rm  |reminder, remindme, timer   |time message OR message time   |!rm 1d23h pick up the next mission on your hunter. !rm set fire to the local orphanage tomorrow at noon.   | Sets up a reminder to send a message reminding you about the thing. If you use a human time like "at noon" it uses UTC.   |
+|!rm mine   |--   |--   |--   |Shows your reminders.   |
+|!rm clear   |del, delete, remove, purge, -   |--   |--   |Removes all of your reminders.   |
+|!sub   |!rm sub   | ID   |!sub 97   |Copies a reminder someone else made. This means you own the reminder, that person deleting their reminder will have no impact.   |
 
-#### Accessing a bio
-`!bio *<mention>`
+## Utilities
 
-Defaults to yourself
-#### Creating a bio
-`!bio + <biocontent>`
-#### Appending to a bio
-`!bio += <biocontent>`
+|Name|Aliases   |Args   |Example   |Usage
+|---|---|---|---|---|
+|!define   |d   |word   |!define well   |Shows the oxford dictionary's definition for the word. Note: due to the length of some definitions it might be a good idea to restrict this command to prevent abuse.   |
+|!wolfram   |wa   |input   |!wa e ^ (pi * i) + 1   |This is similar to going to wolframalpha and entering the text yourself. Doesn't support complicated answers.   |
+|!choose   |pick, choice, select   |choices   |!choose go to sleep, play overwatch   |Picks one of your specified arguments. Use commas for multiple words.   |
+|!activity| -- | [day/week/month/year] | !activity week| Defaults to month, shows the 25 most active members by postcount for the specified timespan (that the bot has seen)
+|!urbandictionary   |!ud   |word   |!ud cleveland steamer   |Returns the urbandictionary definition for your word. @everyone proof. (looking at you, b1nzy)   |
+|!info   |i   |[member]   |!i @Carl#0080   |Returns Name, last 5 nicknames, id, postcount (that the bot has seen), retard coins if more than 0, sicklad points if more than 0, creation date, server join date    |
+|!temp   |weather   |[city]   |!weather stockholm   |EXTREMELY typo proof. If no city is specified, it will give you info for your set home. If used for the first time, that city will be set as your home.   |
+|!temp home   |--   |city   |!temp home tampa   |Lets you set a city as your home for !temp to default to.  |
+|!nicknames   |nicks   |--   |--   |Shows you your nicknames history, duplicates are moved to the end of the list. The names are ordered from oldest to newest.    |
+|!dice   |--   |[sides] [rolls]   |!dice 6   |Rolls a [sides] sided die [rolls] times. Defaults to 6 sides and 1 roll.  |
+|!roll   |--   |[lower-][upper]   |!roll 100-1100   |Works just like in wow, defaults to 0 to 100. Changing just one number will change the upper bound.   |
+|!flip | coin | -- | -- | Flips a coin|
+|!google | g | query | !g umami wiki | Like googling, safesearch is set to medium.|
 
-## Blizzard related commands
-First of all there's a 1/10000 chance per message sent to receive a legendary.
 
-#### RTB
-`!rtb`
 
-Works exactly like the spell in wow did pre-7.2.5
-#### Wow armory
-`!armory/pug <name> <realm> <zone>`
 
-Shows legendaries, ilvl, enchants, gems, traits, progression and m+ stats
-#### Invasion timer
-`!invasion`
-Returns invasion timers for EU and NA
+## Fun/silly/useless
 
-**Tip:**
-use `!rm eu/na` to be reminded when the invasion is up
-#### M+ affixes
-`!m+/affix/affixes`
-Returns current and future m+ affixes and information about them
-#### Pick my x
-`!pickmygold`
-Random ow hero
+|Name|Aliases   |Args   |Example   |Usage
+|---|---|---|---|---|
+|!postcount |pc| [member]| !pc @Carl#0080| Shows the amount of messages the bot has seen the member post.|
+|!postcount top| -- | -- | -- | Shows the all time 10 most active members as far as the bot's concerned.|
+|!retard | -- | [member] | !retard @Kintark#0588| Ever wanted someone to know that you think they're being stupid? !retard them.|
+|!retard top | -- | -- | -- | Shows the biggest retards on the server|
+|!sicklad | -- | [member] | !retard @Kintark#0588| Ever wanted someone to know that you like them without it feeling weird? !sicklad them.|
+|!sicklad top | -- | -- | -- | Shows the sickest lads on the server.|
+|!ae   |aesthetics   |text   |!sc 600 iq   |Returns your text as fullwidth. The example would return "６００ｉｑ"   |
+|!sc   |smallcaps   |text   |!sc neumann   |Returns your text as smallcaps. The example would return "ɴᴇᴜᴍᴀɴɴ"   |
+|!8ball   |--   |--   |!8ball will anyone ever love me?   |It's like any other 8ball command on discord. Annoying, useless and unreasonably popular.   |
+|!echo | -- | message | !echo #general Is this enough to pass the turing test? | Makes the bot say the message in the mentioned channel|
+|!poll | -- | question | !poll should I sleep? | Creates a yes/no poll where you vote with reactions|
+|!quickpoll | -- | question and answers | !quickpoll "best game?" wow overwatch "only losers play games" | Use double quotes for more than just one word. The first arg is the question, all after that are individual answers.
+|!speak | -- | [member] | !speak @Yenni#2794 |Uses [Markov chains](https://github.com/jsvine/markovify) to generate sentences based on what that person has said in the past.
 
-`!pickmyclass`
-Random wow class
+## Starboard
 
-`!pickmyspec`
-Random wow spec
-## General utilities
-### Reminders
+Star messages, have them posted to a channel. It's a fun way to save funny/interesting messages in a place where everyone can see them.
 
-#### Remindme
-`!rm <time> <message>`
+|Name|Aliases   |Args   |Example   |Usage
+|---|---|---|---|---|
+|^!starboard   |--   |[name]   |!starboard meme-archive   |Creates the starboard.   |
+|^!star limit  |--   |number   |!star limit 3   |Sets the amount of stars required for a post to get posted to the starboard   |
+|!star stats   |--   |[member]   |!star stats @Carl#0080   |Shows some information about the server's or user's star giving patterns.  |
 
-Time syntax looks something like `4d23h123m` it's one word, supports years, days, hours, minutes and seconds. You can repeat time units and you can go above 60 minutes for instance. Limited to this century. For the reminder to work you need to be in the same server as you were in when you created the reminder.
-#### Display reminders
-`!rm mine`
-#### Remove reminder
-`!rm clear *<id>`
 
-If no id is supplied, it will ask you if you wish to remove _all_ reminders
-#### Copy someone else's reminder
-`!sub <id>`
+## Animals
 
-Will make a copy of the specified reminder with you as the author
-#### Timer (don't use this please)
-`!timer <time> <message>`
+|Name|Aliases   |Args   |Example   |Usage
+|---|---|---|---|---|
+|!cat   | --  | --  | --  | Gives you a random cat. All of these commands use a database of images collected by scraping reddit, this means you won't get the same 150 dogs that most bots offer through that one popular website. Currently I have about 15000 animals saved.   |
+|!dog   | --  | --  |   --| ^  |
+|!aww   | --  |--   |  -- | ^  |
+|!catbomb   | --  | --  | --  | Gives you 10 links instead of just one, only use this if you LOVE animals!   |
+|!dogbomb   |--   |--   | --  | ^  |
+|!awwbomb   | --  |--   | --  | ^  |
 
-Same syntax as `!rm` but won't work across bot crashes, also won't allow you to delete or list reminders, use for things < 5 minutes.
+## Twitch
 
-### Definitions
-`!d <word>`
+### Adding a twitch stream
 
-Gives you all definitions for the mentioned word.
+|Name|Aliases   |Args   |Example   |Usage
+|---|---|---|---|---|
+|^!twitch   | --  | name [alias]  | !twitch azortharion azor | Adds the user with the alias. In the example given, the stream announcement will say "azor is now live"   |
+|!twitch list   | --  | --  |   --| Shows all registered streamers and when they were last online  |
 
-### Unit conversion
-`!c/convert <query>`
+## Blizzard
 
-Uses google to convert pretty much anything, supports currency, distance, temperature, time, anything.
-### Weather
-`!temp/weather *<location>`
+|Name|Aliases   |Args   |Example   |Usage
+|---|---|---|---|---|
+|!rtb|-- |-- |--|works like the wow spell did before 7.2.5 (6 buffs maximum)
+|!armory|!pug   |name realm region|!armory joshpriest tarren-mill eu| Looks up information about the character and its progress
+|!pickmyspec|--|--|--|Picks a spec at random (any class)
+|!pickmyclass  |--   |--   |--   |Picks a class at  random   |
+|!invasion  |!invasions   |--   |--   |Shows time until the next broken isles invasion for both EU and NA   |
+|!rm &lt;region&gt;  |--   |eu or na   |!rm eu   |Shortcut for creating a reminder to remind you when the invasion is up for that region next (if one is live, it picks the one after the current one)   |
+|!affix  |!m+, !affixes   |--   |--   |Shows which affixes are live for EU/NA (separates when they're different) and which ones are active in the coming weeks.   |
+|!w | wowhead | search | !w jeeves | This is like searching on wowhead.
 
-Returns weather information about a location, defaults to your home
-#### Setting a home
-Using `!weather` for the first time will save your information. If you wish to change it, you can do so by typing
 
-`!temp home <location>`
-#### Random numbers
-`!roll *<range> *<rolls>`
+## User Bio
 
-defaults to 6 and 1
-#### Aesthetics/smallcaps
-`!ae/aesthetics <text>`
+|Name|Aliases   |Args   |Example   |Usage
+|---|---|---|---|---|
+|!bio   |--   |[member]   |!bio @Carl#0080   |Shows the user's saved bio, defaults to the user if member is left blank   |
+|!bio create   |+, add  |Text   |!bio + I really like discord bots   |Adds the text to your bio. If you already have a bio, you'll be prompted to either replace your current bio with it or append to it (see below)   |
+|!bio append   |+=   |Text   |!bio += and hot dogs too!   |Appends the text supplied on a new line to your bio   |
 
-`!sc/smallcaps <text>`
+## Boring bot-related commands
 
-Returns the text as Ｆｕｌｌｗｉｄｔｈ or ꜱᴍᴀʟʟᴄᴀᴘꜱ
+|Name|Aliases   |Args   |Example   |Usage
+|---|---|---|---|---|
+|!invite   |--   |--   |--   | Gives you the invite link for the bot.  |
+|!botpermissions   |--   |--  |--   |Shows the permissions the bot currently has in the channel the command was used in   |
+|!permissions  |--   |[member]   |!permissions @Carl#0080   |Shows the permissions you have in the channel the command was used in. This means even server owners won't have "connect" perms since it'll always be used in a text channel.   |
+|!about   |stats   |--   |--   |Shows some stats related to the bot, mostly for bragging rights.   |
+|!charinfo   |--   |character(s)   |!charinfo :thinking:   |Shows some nerdy unicode stats related to the character. Only real use I've had for this was to find out what some weird characters really are.   |
+|!serverinfo   |--   |--   |--   |Displays some interesting stuff about the servers and its members.   |
+|!uptime   |--   |--   |--   |How long the bot has been up for.   |
+|!socketstats | -- | -- | -- | The events the bot has received from the websocket |
+|!commandstats | -- | -- | -- | How many times each commands have been used since the bot was started |
 
-#### Charinfo
-`!charinfo <characters>`
 
-Returns information about the characters
+## Things that aren't commands
 
-#### 8Ball
-`!8ball`
+Do a wowhead search by enclosing your query with [[double square brackets]]
 
-Your basic shitty 8ball function, rate limited to two uses/channel/minute
+You have a 1/25000 chance per message sent to receive a legendary. Create a role named "Legendary" for a role to be assigned as well.
 
-## Fun/stupid
-### Echo
-`!echo #channel <text>`
+Nicknames and roles are saved, this means that if someone leaves and rejoins their name and roles will be readded.
 
-Will make the bot say what you put as `<text>` in the mentioned #channel
-### Retard
+Direct file uploads of the filetype `.mkv .mov .mp4 .webm` will prompt the user to upload it to streamable for it to embed.
 
-#### Tipping a retard coin
-`!retard <@mention>`
-#### Biggest retards
-`!retard top`
 
-### Sicklad
 
-#### Tipping a sicklad point
-`!sicklad <@mention>`
-#### Sickest lads
-`!sicklad top`
 
-#### Urban dictionary
-`!ud <word>`
-Returns the top definition and example
+# Tags
 
-## Meta
-Commands relating to discord and members in general
+Tags are deceivingly simple to use. With some ingenuity you can create your own, dynamic commands. To aid with this, dynamic "blocks" can be added. It is for instance entirely possible to create an 8ball command, a !hug command and many other things using just tags.
 
-#### Nickname history
-`!nicks/nicknames *<@user>`
+As of writing this, these blocks are:
 
-Returns nickname history for the mentioned user, defaults to yourself.
+Random lists `#{comma, separated,#{nested args}}`
 
-Since discord doesn't track this, the bot  can only show nicknames since it joined. Duplicates are deleted and only the most recent nickname is shown.
+Math blocks `m{1 + 1 / (3 ^ 9)}`
 
-#### Userinfo
-`!i *<@user>`
-Will show your name, discriminator, ID, last five nicknames, postcount (since the bot has been in the server), creation date, join date and avatar (click the name). Defaults to yourself, hides fields with 0.
-#### Serverinfo
-`!serverinfo`
-Shows ID, owner, if it's partnered, text and voice channels, members by status, and roles.
+50/50 blocks `?{Will anyone see me?}`
 
-#### Bot info
-`!about`
-Shows Members, channels, servers, commands, uptime and resource usage.
+command blocks `c{temp stockholm}`
 
-#### Uptime
-`!uptime` Shows how long the bot has been online for
+variable assignment `!{foo=This can be anything}`
 
-## Search commands
+In addition to these blocks, it also comes with a few default arguments.  These are:
 
-### Googling
-`!g <query>`
-Works just like googling, supports google cards like definitions and calculators
+`$unix` - Unix time, useful for math blocks
 
-### Wowhead search
-`!w <query>`
-Returns the most relevant wowhead page
-Alternatively you can wrap words in [[double brackets]] to do the same
-**Example:**
-Hey guys, check out my new [[prydaz]] :kms:
+`$uses` - The amount of times the tag has been used
 
+`$args` - The words after the tag invocation. `!foo bar baz` means $args=bar baz
+
+`$authorid` - The ID of the person using the command, useful for command blocks
+
+`$userid` - The ID of the first mention or author if there aren't any
+
+`$user` - Nickname of the first mentioned user or author if there aren't any mentions
+
+`$channel` - The name of the channel mentioned or the channel the command was used in
+
+`$server` - The name of the server
+
+`$mention` - The nickname of the first mentioned user or NOTHING if there aren't any mentions
+
+`$nuser` - The _name_ of $user
+
+`$nmention` - The _name_ of $mention
+
+`$nauthor` - The _name_ of $author
+
+`$1 $2 $3 etc` - Like $args but only the first, second, third word etc. `!foo bar baz` means $1=bar
+
+
+Still not sure how to use this? [See this link for some interesting and funny tags people have created using TagScript](https://pastebin.com/raw/fbmZ5PjR)
