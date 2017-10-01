@@ -60,7 +60,7 @@ While Carlbot doesn't provide any commands to ban/purge/mute users, it offers ex
 
 ## Tags
 
-Tags can be complicated, see [the full section](#Tags-1) for a more thorough explanation with advanced usage.
+Tags can be complicated, see [the full section](#tags-1) for a more thorough explanation with advanced usage.
 
 |Name|Aliases   |Args   |Example   |Usage
 |---|---|---|---|---|
