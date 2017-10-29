@@ -99,6 +99,40 @@ Very typo proof.
 |!role whitelist   |add, +, -, del, remove, delete   |role   |!role add python   |Adds the role to the whitelist so anyone can assign it to themselves. For this command to work both the bot and the command user needs to be able to assign the role to someone.   |
 |^!role unique   |--   |--   |--   |Makes it so that any roles given will replace any other whitelisted roles. This can be useful for servers where it doesn't make any sense for someone to have multiple roles.   |
 |!roles   |--   |--   |--   |Shows all whitelisted roles   |
+|!role alias | -- | new_alias existing_role | !role alias shaman farseer | Aliasing roles is useful for servers with complicated role names. For instance, one wow server utilizing this command has a role called "Farseer" corresponding to the shaman class in wow. Using the command in the example allows people to get the "Farseer" role by typing "!role shaman".
+
+### Automatic Roles
+
+|Name|Aliases   |Args   |Example   |Usage
+|---|---|---|---|---|
+|!autorole | autoroles | -- | -- | Shows which roles will be added upon joining and if the bot will readd bots when someone leaves and rejoins the server
+|!autoroles readd | reassign |-- |-- | Turns reassigning roles on/off
+|!autorole add | -- | role | !autorole add peon | Autoroles are roles that are given to the user upon joining the server. |
+|!autorole remove | -- | role | !autorole remove admin | -//-|
+
+## Welcome and Farewell messages
+|Name|Aliases   |Args   |Example   |Usage
+|---|---|---|---|---|
+| !greet | -- | text | !greet Welcome $mention, we've been expecting you| Sets up a welcome message that will be sent when a new user joins.
+|!farewell | -- | text | !farewell Goodbye $user, maybe it wasn't meant to be... |Like !greet but for people leaving
+|!banmsg |--|text | !banmsg **$user** just got blown the fuck out| Like !greet but for people getting banned
+
+All these messages will be sent to the channel saved with `!set welcome`. Use a command without any text to remove the message. Supports the following variables:
+
+`$mention` - Pings the user
+
+`$user` - The name of the user
+
+`$nick` - The display name of the user (not available for banmsg)
+
+`$server` - The name of the server
+
+`$id` - The ID of the user
+
+`$discrim` - The last four digits (0080 for "Carl#0080") does **not** include the hash sign.
+
+Also supports `#{random lists, separated by commas}` and `m{1 + 1} math blocks` not sure when you'd ever want a math block but random lists are pretty useful.
+
 
 
 ## Timers/reminders
@@ -221,10 +255,6 @@ Star messages, have them posted to a channel. It's a fun way to save funny/inter
 
 Do a wowhead search by enclosing your query with [[double square brackets]]
 
-You have a 1/25000 chance per message sent to receive a legendary. Create a role named "Legendary" for a role to be assigned as well.
-
-Nicknames and roles are saved, this means that if someone leaves and rejoins their name and roles will be readded.
-
 Direct file uploads of the filetype `.mkv .mov .mp4 .webm` will prompt the user to upload it to streamable for it to embed.
 
 
@@ -232,7 +262,7 @@ Direct file uploads of the filetype `.mkv .mov .mp4 .webm` will prompt the user 
 
 # Tags
 
-Tags are deceivingly simple to use. With some ingenuity you can create your own, dynamic commands. To aid with this, dynamic "blocks" can be added. It is for instance entirely possible to create an 8ball command, a !hug command and many other things using just tags.
+Tags are easy to learn, but very powerful. With some ingenuity you can create your own, dynamic commands. To aid with this, dynamic "blocks" can be added. It is for instance entirely possible to create an 8ball command, a !hug command and many other things using just tags.
 
 As of writing this, these blocks are:
 
@@ -253,6 +283,8 @@ In addition to these blocks, it also comes with a few default arguments.  These 
 `$uses` - The amount of times the tag has been used
 
 `$args` - The words after the tag invocation. `!foo bar baz` means $args=bar baz
+
+`$commandargs` - The words after the tag invocation, unlike `$args` this includes mentions in the `<@id>` format (useful for command blocks)
 
 `$authorid` - The ID of the person using the command, useful for command blocks
 
