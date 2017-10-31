@@ -158,7 +158,7 @@ Also supports `#{random lists, separated by commas}` and `m{1 + 1} math blocks` 
 |!temp home   |--   |city   |!temp home tampa   |Lets you set a city as your home for !temp to default to.  |
 |!nicknames   |nicks   |--   |--   |Shows you your nicknames history, duplicates are moved to the end of the list. The names are ordered from oldest to newest.    |
 |!dice   |--   |[sides] [rolls]   |!dice 6   |Rolls a [sides] sided die [rolls] times. Defaults to 6 sides and 1 roll.  |
-|!roll   |--   |[lower-][upper]   |!roll 100-1100   |Works just like in wow, defaults to 0 to 100. Changing just one number will change the upper bound.   |
+|!roll   |--   |[[lower-]upper]   |!roll 100-1100   |Works just like in wow, defaults to 1 to 100. Changing just one number will change the upper bound.   |
 |!flip | coin | -- | -- | Flips a coin|
 |!google | g | query | !g umami wiki | Like googling, safesearch is set to medium.|
 
