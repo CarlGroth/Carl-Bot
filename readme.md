@@ -4,7 +4,7 @@ How do I read this?
 
 Args are what goes after the command, in `!temp home stockholm` "stockholm" is the args, in `!tag create test Hello World` "test" is the first arg and "Hello world" is the second. If an argument is in [square brackets] it means that it's optional.
 
-An alias is another way to call a command. For instance, `temp` and `weather` function identically. A caret (^) means that the command requires manage server to be used.
+An alias is another way to call a command. For instance, `temp` and `weather` function identically. If the command is in **bold**, that means it requires "manage server" to be executed.
 
 
 
@@ -13,9 +13,9 @@ An alias is another way to call a command. For instance, `temp` and `weather` fu
 |Name|Aliases   |Args   |Example   |Usage
 |---|---|---|---|---|
 |!prefix   |--   |--   |--   |Lists the affixes currently in use by the server   |
-|^!prefix add   |--   |prefix   |!prefix add "sudo "   |Adds a prefix to be used by the bot (limited to 10) **NOTE** if you want a two word prefix or a prefix with a space after it or an emoji you **must** use quotes, this is a discord limitation and can't be fixed   |
-|^!prefix remove   |delete   |prefix   |!prefix remove !   |Removes a prefix, same limits as !prefix add applies here, can't remove mentioning the bot.   |
-|^!prefix clear   |--   |--   |--   |Removes all prefixes except mentioning the bot. This (obviously) means you need to mention the bot to register more prefixes   |
+|**!prefix add**   |--   |prefix   |!prefix add "sudo "   |Adds a prefix to be used by the bot (limited to 10) **NOTE** if you want a two word prefix or a prefix with a space after it or an emoji you **must** use quotes, this is a discord limitation and can't be fixed   |
+|**!prefix remove**   |delete   |prefix   |!prefix remove !   |Removes a prefix, same limits as !prefix add applies here, can't remove mentioning the bot.   |
+|**!prefix clear**   |--   |--   |--   |Removes all prefixes except mentioning the bot. This (obviously) means you need to mention the bot to register more prefixes   |
 
 ## Logging
 
@@ -23,19 +23,19 @@ An alias is another way to call a command. For instance, `temp` and `weather` fu
 
 |Name|Aliases   |Args   |Example   |Usage
 |---|---|---|---|---|
-|^!set log  |--   |channel   |!set log #bot_logs   |Choose where the bot logs things to    |
-|^!set twitch   |--   |channel   |!set twitch #couch   |Choose which channel the bot announces twitch streams to   |
-|^!set bot   |--   | channel   |!set bot #bot-abuse   |Choose which channel restricted commands/tags go to   |
-|^!config   |--   |--   |--   |Shows what the bot logs, what channels it doesn't log from, channels it ignores commands from, disabled commands, banned users, logging channel, twitch channel and prefixes   |
-|^!log avatar  |--   |--   |--   |Sets logging avatar changes to true or false depending on what it currently is   |
-|^!log edit  |--   |--   |--   |Sets logging message edits to true or false   |
-|^!log role  |--   |--   |--   |Sets logging role updates to true or false   |
-|^!log delete  |--   |--   |--   |Sets logging message deletions to true or false   |
-|^!log ban  |--   |--   |--   |Sets logging server bans to true or false   |
-|^!log join  |--   |--   |--   |Sets logging members joining/leaving to true or false depending on what it currently is   |
-|^!log name  |--   |--   |--   |Sets logging name changes to true or false depending on what it currently is   |
-|^!log ignore   |--   |[channel]   |--   |Makes the bot ignore message edits/deletions from the channel. This is useful if you have a public log but private channels.   |
-|^!log unignore   |--   |[channel]   |--   |Unignores previously ignored channels   |
+|**!set log**  |--   |channel   |!set log #bot_logs   |Choose where the bot logs things to    |
+|**!set twitch**   |--   |channel   |!set twitch #couch   |Choose which channel the bot announces twitch streams to   |
+|**!set bot**   |--   | channel   |!set bot #bot-abuse   |Choose which channel restricted commands/tags go to   |
+|**!config**   |--   |--   |--   |Shows what the bot logs, what channels it doesn't log from, channels it ignores commands from, disabled commands, banned users, logging channel, twitch channel and prefixes   |
+|**!log avatar**  |--   |--   |--   |Sets logging avatar changes to true or false depending on what it currently is   |
+|**!log edit**  |--   |--   |--   |Sets logging message edits to true or false   |
+|**!log role**  |--   |--   |--   |Sets logging role updates to true or false   |
+|**!log delete**  |--   |--   |--   |Sets logging message deletions to true or false   |
+|**!log ban**  |--   |--   |--   |Sets logging server bans to true or false   |
+|**!log join**  |--   |--   |--   |Sets logging members joining/leaving to true or false depending on what it currently is   |
+|**!log name**  |--   |--   |--   |Sets logging name changes to true or false depending on what it currently is   |
+|**!log ignore**   |--   |[channel]   |--   |Makes the bot ignore message edits/deletions from the channel. This is useful if you have a public log but private channels.   |
+|**!log unignore**   |--   |[channel]   |--   |Unignores previously ignored channels   |
 
 ## Bot Moderation
 
@@ -43,20 +43,20 @@ While Carlbot doesn't provide any commands to ban/purge/mute users, it offers ex
 
 |Name|Aliases   |Args   |Example   |Usage
 |---|---|---|---|---|
-|^!ignore   |--   | [channel] [command] [subcommand]   |!ignore #general temp home   |If no channel is specified, the current channel is ignored. If no command is specified, the mentioned channel will be ignored. If only a command is supplied, the command and all of its subcommands will be ignored in the specified channel. If everything is supplied, only the subcommand will be ignored in the specified channel. Mod (manage server) will bypass all of these.   |
-|^!ignore server   | --  |--   |--   | This will ignore all channels and is future-proof.    |
-|^!ignore all   |--   |[command] [subcommand]   |!ignore all sicklad top   |This is equal to typing !ignore channel command subcommand in all channels the bot can see, useful if you want to ignore a command in all channels except for one. This will not work for channels created in the future. If the command is already ignored in a channel, this will unignore it.  |
-|^!unignore all   | --  | --   | --  | Unignores all channels (this does not take ignored commands into account)   |
-|^!disable   |--   | command [subcommand]  | !disable retard top  |This really disables the command globally from the server, not even manage server bypasses this.    |
-|^!enable   |--   |--   |!enable retard top   |Enables a previously disabled command.   |
-|^!enable all   |--   |--   |--   |Sets all commands to enabled.   |
-|^!disable all   |--   |--   |--   |Sets all commands to disabled.  |
+|**!ignore**   |--   | [channel] [command] [subcommand]   |!ignore #general temp home   |If no channel is specified, the current channel is ignored. If no command is specified, the mentioned channel will be ignored. If only a command is supplied, the command and all of its subcommands will be ignored in the specified channel. If everything is supplied, only the subcommand will be ignored in the specified channel. Mod (manage server) will bypass all of these.   |
+|**!ignore server**   | --  |--   |--   | This will ignore all channels and is future-proof.    |
+|**!ignore all**   |--   |[command] [subcommand]   |!ignore all sicklad top   |This is equal to typing !ignore channel command subcommand in all channels the bot can see, useful if you want to ignore a command in all channels except for one. This will not work for channels created in the future. If the command is already ignored in a channel, this will unignore it.  |
+|**!unignore all**   | --  | --   | --  | Unignores all channels (this does not take ignored commands into account)   |
+|**!disable**   |--   | command [subcommand]  | !disable retard top  |This really disables the command globally from the server, not even manage server bypasses this.    |
+|**!enable**   |--   |--   |!enable retard top   |Enables a previously disabled command.   |
+|**!enable all**   |--   |--   |--   |Sets all commands to enabled.   |
+|**!disable all**   |--   |--   |--   |Sets all commands to disabled.  |
 |!enable list | disable list | -- | -- | Shows all enabled/disabled commands.|
-|^!plonk   |--   |member [command][subcommand]   |!plonk @Carl#0080 tag create   |This works almost exactly like !ignore but for users instead. If no command is specified, the user is banned from using the bot completely.   |
-|^!unplonk  |--   |member [command][subcommand]    |!unplonk @Carl#0080   |Unbans the user from using the bot   |
+|**!plonk**   |--   |member [command][subcommand]   |!plonk @Carl#0080 tag create   |This works almost exactly like !ignore but for users instead. If no command is specified, the user is banned from using the bot completely.   |
+|**!unplonk**  |--   |member [command][subcommand]    |!unplonk @Carl#0080   |Unbans the user from using the bot   |
 |!plonks   |--   |--   |--   |Displays all plonked users.   |
-|^!restrict   |--   |command [subcommand]   |!restrict define   |This requires a bot channel to utilize. Makes it so that if the command is used outside of the bot channel, the bot will ping the user in the botchannel and give the results there instead.   |
-|^!unrestrict   |--   |command [subcommand]   |!unrestrict d   | Unrestricts it. Like all commands where you pass in a command, aliases work just as well.   |
+|**!restrict**   |--   |command [subcommand]   |!restrict define   |This requires a bot channel to utilize. Makes it so that if the command is used outside of the bot channel, the bot will ping the user in the botchannel and give the results there instead.   |
+|**!unrestrict**   |--   |command [subcommand]   |!unrestrict d   | Unrestricts it. Like all commands where you pass in a command, aliases work just as well.   |
 
 ## Tags
 
@@ -66,13 +66,13 @@ Tags can be complicated, see [the full section](#tags-1) for a more thorough exp
 |---|---|---|---|---|
 |!tag   |tag get   |lookup   |!classdiscords   |This is how you get tags after they're saved.   |
 |!tag create   |add, +    |tagname tagcontent   |!tag + test Hello world   |Makes a tag named test with the content Hello world.   |
-|^!tag ++   |--   |A pastebin link   |--   | Since tags can have an output shorter than their length, using !tag ++ allows you to make them  |
+|**!tag ++**   |--   |A pastebin link   |--   | Since tags can have an output shorter than their length, using !tag ++ allows you to make them  |
 |!tag append   |+=   |tagname tagcontent   |!tag += test and my mom   |Adds tagcontent to an already existing tag   |
 |!tag alias   | a  |alias tagname   |!tag alias testing test   | Creates a link to an already existing tag, changes made to the original tag means the aliased tag will also be changed. The name you want for the alias is the first argument, the already existing tag is the second.  |
 |!tag edit   |e   |tagname tagcontent   |!tag e test bye world   |Edits the content of an already existing tag.   |
-|^!tag nsfw   |--   |tagname   |!tag nsfw test   |Restricts the tag so that it can only be used in channels marked as nsfw   |
-|^!tag restrict   |--   |tagname   |!tag restrict test   |To prevent big tags cluttering your chatty channels, this will make the bot post the content in the bot-channel and ping the author.   |
-|^!tag mod   |--   |tagname   |!tag mod test   |Makes it so that only mods can use the command (manage server)   |
+|**!tag nsfw**   |--   |tagname   |!tag nsfw test   |Restricts the tag so that it can only be used in channels marked as nsfw   |
+|**!tag restrict**   |--   |tagname   |!tag restrict test   |To prevent big tags cluttering your chatty channels, this will make the bot post the content in the bot-channel and ping the author.   |
+|**!tag mod**   |--   |tagname   |!tag mod test   |Makes it so that only mods can use the command (manage server)   |
 |!tag stats   |--   |[member]   |!tag stats @Carl#0080   |Shows information about the servers tags (uses, top 3, total number of tags). If you mention someone, it will show their tags instead.   |
 |!tag info   |--   | tagname  |!tag info test   | Shows some stats collected about the tag, uses, creation date, last update, owner.  |
 
@@ -97,7 +97,7 @@ Very typo proof.
 |---|---|---|---|---|
 |!role    |--   |role   |!role python   |This will add the role to you if the role is whitelisted. The command is typo proof so "rouge" will match with "rogue".    |
 |!role whitelist   |add, +, -, del, remove, delete   |role   |!role add python   |Adds the role to the whitelist so anyone can assign it to themselves. For this command to work both the bot and the command user needs to be able to assign the role to someone.   |
-|^!role unique   |--   |--   |--   |Makes it so that any roles given will replace any other whitelisted roles. This can be useful for servers where it doesn't make any sense for someone to have multiple roles.   |
+|**!role unique**   |--   |--   |--   |Makes it so that any roles given will replace any other whitelisted roles. This can be useful for servers where it doesn't make any sense for someone to have multiple roles.   |
 |!roles   |--   |--   |--   |Shows all whitelisted roles   |
 |!role alias | -- | new_alias existing_role | !role alias shaman farseer | Aliasing roles is useful for servers with complicated role names. For instance, one wow server utilizing this command has a role called "Farseer" corresponding to the shaman class in wow. Using the command in the example allows people to get the "Farseer" role by typing "!role shaman".
 
@@ -113,9 +113,9 @@ Very typo proof.
 ## Welcome and Farewell messages
 |Name|Aliases   |Args   |Example   |Usage
 |---|---|---|---|---|
-| !greet | -- | text | !greet Welcome $mention, we've been expecting you| Sets up a welcome message that will be sent when a new user joins.
-|!farewell | -- | text | !farewell Goodbye $user, maybe it wasn't meant to be... |Like !greet but for people leaving
-|!banmsg |--|text | !banmsg **$user** just got blown the fuck out| Like !greet but for people getting banned
+|**!greet** | -- | text | !greet Welcome $mention, we've been expecting you| Sets up a welcome message that will be sent when a new user joins.
+|**!farewell** | -- | text | !farewell Goodbye $user, maybe it wasn't meant to be... |Like !greet but for people leaving
+|**!banmsg** |--|text | !banmsg **$user** just got blown the fuck out| Like !greet but for people getting banned
 
 All these messages will be sent to the channel saved with `!set welcome`. Use a command without any text to remove the message. Supports the following variables:
 
@@ -189,9 +189,12 @@ Star messages, have them posted to a channel. It's a fun way to save funny/inter
 
 |Name|Aliases   |Args   |Example   |Usage
 |---|---|---|---|---|
-|^!starboard   |--   |[name]   |!starboard meme-archive   |Creates the starboard.   |
-|^!star limit  |--   |number   |!star limit 3   |Sets the amount of stars required for a post to get posted to the starboard   |
+|**!starboard**   |--   |[name]   |!starboard meme-archive   |Creates the starboard.   |
+|**!star limit**  |--   |number   |!star limit 3   |Sets the amount of stars required for a post to get posted to the starboard   |
 |!star stats   |--   |[member]   |!star stats @Carl#0080   |Shows some information about the server's or user's star giving patterns.  |
+|!star top   |--   |--   |--   |Returns the most starred posts |
+|!star nsfw   |--   |--   |--   |Toggles nsfw stars. With this enabled, posts starred in channels marked as nsfw will embed |
+|!star self   |--   |--   |--   |Toggles being able to star your own posts |
 
 
 ## Animals
@@ -211,8 +214,11 @@ Star messages, have them posted to a channel. It's a fun way to save funny/inter
 
 |Name|Aliases   |Args   |Example   |Usage
 |---|---|---|---|---|
-|^!twitch   | --  | name [alias]  | !twitch azortharion azor | Adds the user with the alias. In the example given, the stream announcement will say "azor is now live"   |
+|**!twitch**   | --  | name [alias]  | !twitch azortharion azor | Adds the user with the alias. In the example given, the stream announcement will say "azor is now live"   |
 |!twitch list   | --  | --  |   --| Shows all registered streamers and when they were last online  |
+|**!twitch own**   | ownership  | --  |   --| With this enabled, users can't have the streams they themselves added removed by non-mods, this is useful if you want to allow users to add their own streams to a server  |
+|**!twitch mod**   | modonly  | --  |   --| If this is disabled, any user can add a stream of their choice  |
+|**!twitch limit**   | --  | number  |  !twitch limit 2  | Restricts how many streams non-mods are allowed to add  |
 
 ## Blizzard
 
@@ -269,6 +275,10 @@ As of writing this, these blocks are:
 Random lists `#{comma, separated,#{nested args}}`
 
 Math blocks `m{1 + 1 / (3 ^ 9)}`
+
+React blocks `react{:regional_indicator_f:}`
+
+   This will react to the post with the emojis placed inside the brackets
 
 50/50 blocks `?{Will anyone see me?}`
 
