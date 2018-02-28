@@ -30,7 +30,9 @@ INITIAL_EXTENSIONS = [
     'cogs.highlight',
     'cogs.nsfw',
     'cogs.reminders',
-    'cogs.roles'
+    'cogs.roles',
+    'cogs.stars',
+    'cogs.wolfram'
 ]
 
 
@@ -52,9 +54,9 @@ def write_json(filename, contents):
 
 conn = sqlite3.connect('database.db')
 c = conn.cursor()
-c.execute('''CREATE TABLE IF NOT EXISTS users
-        (roles text, server text, location text,
-        id text, names text, postcount int, retard int, sicklad int)''')
+# c.execute('''CREATE TABLE IF NOT EXISTS users
+#         (roles text, server text, location text,
+#         id text, names text, postcount int, retard int, sicklad int)''')
 
 
 # discord_logger = logging.getLogger('discord')
@@ -103,7 +105,7 @@ class CarlBot(commands.Bot):
         self.prefixes = {int(k): v.split(',') for (k, v) in pre.items()}
         self.session = aiohttp.ClientSession(loop=self.loop)
         self.token = credentials["token"]
-        self.remove_command('help')
+        # self.remove_command('help')
 
         for extension in INITIAL_EXTENSIONS:
             try:
@@ -136,62 +138,52 @@ class CarlBot(commands.Bot):
         if not hasattr(self, 'uptime'):
             self.uptime = datetime.datetime.utcnow()
         for server in self.guilds:
-            c.execute('SELECT * FROM servers WHERE id=?', (str(server.id),))
-            server_table = c.fetchall()
-            if server_table == []:
-                c.execute('''INSERT INTO servers
-                             VALUES (?, ?, ?, ?, ?, ?)''',
-                          (str(server.id), None, None, None, None, '?,!'))
-                conn.commit()
-            c.execute('SELECT * FROM logging WHERE server=?',
-                      (str(server.id),))
-            logging_table = c.fetchall()
-            if logging_table == []:
-                c.execute('''INSERT INTO logging
-                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                          (str(server.id), 1, 1, 1, 1, 1, 1, 1, None))
-                conn.commit()
-            c.execute('SELECT * FROM config WHERE guild_id=?', (server.id,))
-            guild_config = c.fetchall()
-            if guild_config == []:
-                c.execute('''INSERT INTO config
-                             VALUES (?, ?, ?, ?)''',
-                          (server.id, None, None, True))
-                conn.commit()
+            c.execute('''INSERT OR IGNORE INTO servers
+                            VALUES (?, ?, ?, ?, ?, ?)''',
+                        (str(server.id), None, None, None, None, '?,!'))
+            conn.commit()
+            c.execute('''INSERT OR IGNORE INTO logging
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                        (str(server.id), 1, 1, 1, 1, 1, 1, 1, None))
+            conn.commit()
+            c.execute('''INSERT OR IGNORE INTO config
+                            VALUES (?, ?, ?, ?, ?, ?)''',
+                        (server.id, None, None, True, None, None))
+            conn.commit()
+            c.execute('''INSERT OR IGNORE INTO role_config
+                            VALUES (?, ?, ?, ?, ?)''',
+                        (None, False, str(server.id), None, True))
+            conn.commit()
+        # member_list = self.get_all_members()
+        # for member in member_list:
+        #     print("member: {}{}".format(member.name, member.id))
+        #     c.execute('''SELECT *
+        #                  FROM users 
+        #                  WHERE (id=? AND server=?)''',
+        #               (str(member.id), member.guild.id))
+        #     user_info = c.fetchall()
+        #     if user_info == []:
+        #         roles = ','.join([str(x.id)
+        #                           for x in member.roles if x.name != "@everyone"])
+        #         names = member.display_name
+        #         c.execute('''INSERT INTO users
+        #                      VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+        #                   (roles, str(member.guild.id), None, str(member.id), names, 0, 0, 0))
+        # conn.commit()
+            # c.execute('''SELECT *
+            #              FROM userconfig 
+            #              WHERE (guild_id=? AND user_id=?)''',
+            #           (member.guild.id, member.id))
+            # user_config = c.fetchall()
+            # if user_config == []:
+            #     c.execute('''INSERT INTO userconfig
+            #                  VALUES (?, ?, ?, ?, ?, ?)''',
+            #               (member.guild.id, member.id, None, None, False, None))
+            #     conn.commit()
 
-            c.execute('SELECT * FROM role_config WHERE guild_id=?', (str(server.id),))
-            role_config_table = c.fetchall()
-            if role_config_table == []:
-                c.execute('''INSERT INTO role_config
-                             VALUES (?, ?, ?)''',
-                          (None, False, str(server.id)))
-                conn.commit()
-        member_list = self.get_all_members()
-        for member in member_list:
-            c.execute('''SELECT *
-                         FROM users 
-                         WHERE (id=? AND server=?)''',
-                      (str(member.id), member.guild.id))
-            user_info = c.fetchall()
-            if user_info == []:
-                roles = ','.join([str(x.id)
-                                  for x in member.roles if x.name != "@everyone"])
-                names = member.display_name
-                c.execute('''INSERT INTO users
-                             VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
-                          (roles, str(member.guild.id), None, str(member.id), names, 0, 0, 0))
-                conn.commit()
-            c.execute('''SELECT *
-                         FROM userconfig 
-                         WHERE (guild_id=? AND user_id=?)''',
-                      (member.guild.id, member.id))
-            user_config = c.fetchall()
-            if user_config == []:
-                c.execute('''INSERT INTO userconfig
-                             VALUES (?, ?, ?, ?, ?, ?)''',
-                          (member.guild.id, member.id, None, None, False, None))
-                conn.commit()
-
+            # Why is this commented out?
+            # Because of how sql queries work, it's obviously faster to keep the db as small as needed
+            # We don't need to save someone's record if they don't have anything special about them
     def get_guild_prefixes(self, guild, *, local_inject=_prefix_callable):
         """
         Since prefixes are per server now, we need a way to retrieve them
@@ -212,10 +204,10 @@ class CarlBot(commands.Bot):
         """
         if not prefixes:
             c.execute('UPDATE servers SET prefix=? WHERE id=?',
-                      (None, str(guild.id)))
+                      (None, guild.id))
             conn.commit()
             self.prefixes[guild.id] = prefixes
-        elif len(prefixes) > 10:
+        elif len(prefixes) > 15:
             raise RuntimeError('Cannot have more than 10 custom prefixes.')
         else:
             c.execute('''UPDATE servers
@@ -224,38 +216,17 @@ class CarlBot(commands.Bot):
                       (','.join(sorted(set(prefixes))), str(guild.id)))
             conn.commit()
             self.prefixes[guild.id] = sorted(set(prefixes))
-            print(self.prefixes[guild.id])
 
     async def on_message(self, message):
         if message.author.bot:
             return
         await self.process_commands(message)
         ctx = await self.get_context(message)
-        if ctx.invoked_with not in self.commands and ctx.command is None:
+        if ctx.invoked_with and ctx.invoked_with.lower() not in self.commands and ctx.command is None:
             msg = copy.copy(message)
             if ctx.prefix:
                 new_content = msg.content[len(ctx.prefix):]
-                print("new content: {}".format(new_content))
-                print(f"old content: '{ctx.invoked_with}'")
-                if ctx.invoked_with in [
-                    "add",   # clashes with mee6
-                    "+",     # as if I needed more
-                    "remove",  # reasons to dislike it
-                    "procreate",
-                    "create",
-                    "&",
-                    "append",
-                    "owner",
-                    "raw",
-                    "mine",
-                    "+=",
-                    "++",
-                    "edit",
-                    "update",
-                    "list"
-                ]:
-                    return
-                msg.content = "{}tag {}".format(ctx.prefix, new_content)
+                msg.content = "{}tag get {}".format(ctx.prefix, new_content)
                 await self.process_commands(msg)
 
     async def close(self):
