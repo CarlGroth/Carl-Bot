@@ -222,6 +222,20 @@ class Blizzard:
     async def pickmygold(self, ctx):
         await ctx.send(random.choice(OW_Heroes))
 
+    @commands.command(name="reset", aliases=['whenisthereset'])
+    async def _reset(self, ctx):
+        """
+        Shows how long until wow resets for eu/na
+        """
+        eu_reset = datetime.datetime(year=2018, month=1, day=1, hour=7)
+        na_reset = datetime.datetime(year=2018, month=1, day=1, hour=15)
+        now = datetime.datetime.utcnow()
+        eu_diff = datetime.timedelta(seconds=86400 - ((now - eu_reset).total_seconds() % 86400))
+        na_diff = datetime.timedelta(seconds=86400 - ((now - na_reset).total_seconds() % 86400))
+        eu_timedelta = blizzard_time(eu_diff)
+        na_timedelta = blizzard_time(na_diff)
+        await ctx.send(f'**Time until reset**\nEU: {eu_timedelta}\nNA: {na_timedelta}')
+        
     @commands.command(aliases=['pug'])
     async def armory(self, ctx):
         leftover_args = ctx.message.content.split()
@@ -246,7 +260,7 @@ class Blizzard:
         if realm.lower() not in self.realms[zone] and zone in locales:
             # Super high tech fuzzy string matching
             # incredibly helpful since blizzard doesn't seem to
-            # have any consistency across their realm names
+            # have any consistensy across their realm names
             # will correct "tarnmil" to "tarren-mill" works for russian servers too
             realm2 = process.extractOne(realm.lower(), self.realms[zone])
             # I think I'm the only person who actually cares about the ratio, but at least
@@ -257,23 +271,21 @@ class Blizzard:
             replaced = True
         name = leftover_args[0].lower()
         url = "https://" + zone + ".api.battle.net/wow/character/" + realm + "/" + name + \
-            "?fields=items&locale=" + locale + "&apikey=" + "token"
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as r:
-                response = await r.json()
-                if "status" in response:
-                    if response["status"] == 'nok':
-                        await ctx.send("Could not fetch character info, error: `{}`".format(response["reason"]))
-                        if not ctx.guild is None:
-                            await ctx.message.delete()
-                        return
+            "?fields=items&locale=" + locale + "&apikey=" + "TOKEN"
+        async with self.bot.session.get(url) as r:
+            response = await r.json()
+            if "status" in response:
+                if response["status"] == 'nok':
+                    await ctx.send("Could not fetch character info, error: `{}`".format(response["reason"]))
+                    if not ctx.guild is None:
+                        await ctx.message.delete()
+                    return
 
         url = "https://" + zone + ".api.battle.net/wow/character/" + realm + "/" + name + \
             "?fields=progression&locale=" + locale + \
-            "&apikey=" + "token"
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as r:
-                progressionresponse = await r.json()
+            "&apikey=" + "TOKEN"
+        async with self.bot.session.get(url) as r:
+            progressionresponse = await r.json()
         try:
             # This only seems to work 50% of the time
             avatar_url = progressionresponse["thumbnail"]
@@ -382,7 +394,7 @@ class Blizzard:
 
         url = "https://" + zone + ".api.battle.net/wow/character/" + realm + "/" + name + \
             "?fields=progression+achievements&locale=" + locale + \
-            "&apikey=" + "token"
+            "&apikey=" + "TOKEN"
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as r:
                 rx = await r.json()
@@ -465,7 +477,7 @@ class Blizzard:
             nafmt = "<:redtick:318044813444251649> There is no invasion going on right now, next one in {}.".format(
                 naprintme)
 
-        await ctx.send("**EU: **{}\n**NA: **{}".format(eufmt, nafmt))
+        await ctx.send("**EU: **{}\n**NA: **{}\ntip: use `!rm eu` or `!rm na` to be reminded when the invasion is up next".format(eufmt, nafmt))
 
     @commands.command(aliases=["m+", "affixes"])
     async def affix(self, ctx):
@@ -487,7 +499,10 @@ class Blizzard:
         E = (E + 2) % 12
         N = (N + 2) % 12
         author = ctx.message.author
-        usercolor = author.colour
+        if ctx.guild is None:
+            usercolor = 0xeeeeee
+        else:
+            usercolor = author.colour
         em = discord.Embed(title="Affix information",
                            description="http://www.wowhead.com/affixes", colour=usercolor)
         em.set_author(name="Mythic+ affixes", icon_url="https://i.imgur.com/m7PjTW0.png",

@@ -34,7 +34,6 @@ class Bio:
             return await ctx.send("User has not set a bio\nTo set a bio use `!bio + <content>`, no mentions!")
         else:
             bio = bio[0][0]
-            print(bio)
             self.c.execute(
                 'UPDATE bio SET uses = uses + 1 WHERE (server=? AND owner=?)', (ctx.guild.id, owner.id))
             self.conn.commit()

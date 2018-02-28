@@ -4,6 +4,9 @@ import datetime
 import traceback
 import psutil
 import os
+import sqlite3
+import functools
+import asyncio
 
 from cogs.utils import checks
 from discord.ext import commands
@@ -18,6 +21,8 @@ class Stats:
     def __init__(self, bot):
         self.bot = bot
         self.process = psutil.Process()
+        self.conn = sqlite3.connect('database.db')
+        self.c = self.conn.cursor()
 
     async def on_command(self, ctx):
         command = ctx.command.qualified_name
@@ -54,12 +59,17 @@ class Stats:
         await ctx.send('```\n{}\n```'.format(output))
 
     @commands.command(hidden=True)
-    async def socketstats(self, ctx):
+    async def socketstats(self, ctx, limit=20):
         delta = datetime.datetime.utcnow() - self.bot.uptime
         minutes = delta.total_seconds() / 60
         total = sum(self.bot.socket_stats.values())
         cpm = total / minutes
-        await ctx.send('{0} socket events observed ({1:.2f}/minute):\n{2}'.format(total, cpm, self.bot.socket_stats))
+        width = len(max(self.bot.socket_stats, key=lambda x: len(str(x))))
+        con = self.bot.socket_stats.most_common(limit)
+        fancy = '\n'.join('{0:<{1}}: {2:>12,}'.format(str(k), width, c)
+                         for k, c in con)
+
+        await ctx.send('{0:,} socket events observed ({1:.2f}/minute):\n```{2}```'.format(total, cpm, fancy))
 
     def get_bot_uptime(self, *, brief=False):
         now = datetime.datetime.utcnow()
@@ -80,7 +90,7 @@ class Stats:
 
         return fmt.format(d=days, h=hours, m=minutes, s=seconds)
 
-    @commands.command(pass_context=True)
+    @commands.command()
     async def uptime(self, ctx):
         """Tells you how long the bot has been up for."""
         em = discord.Embed(title="Local time", description=str(
@@ -93,6 +103,93 @@ class Stats:
             self.bot.uptime)[:-7], inline=True)
         await ctx.send(embed=em)
         # await ctx.send('Uptime: **{}**'.format(self.get_bot_uptime()))
+
+
+
+
+
+
+    def get_activity(self, g, diff):
+        self.c.execute('''SELECT count(*) as c, author
+                          FROM messages
+                          WHERE (server=? AND unix > ?)
+                          GROUP BY author
+                          ORDER BY c DESC;''',
+                          (g.id, diff))
+        record = self.c.fetchall()
+        return record
+
+
+
+    @commands.group(invoke_without_command=True)
+    async def activity(self, ctx, unit: str="month"):
+        unit = unit.lower()
+        time_dict = {
+            "day": 86400,
+            "week": 604800,
+            "month": 2592000,
+            "year": 31556952
+        }
+        if unit not in time_dict:
+            unit = "month"
+        time_seconds = time_dict.get(unit, 2592000)
+        now = int(datetime.datetime.utcnow().timestamp())
+        diff = now - time_seconds
+        thing = functools.partial(self.get_activity, ctx.guild, diff)
+        #record = await self.bot.loop.run_in_executor(None, thing)
+        self.c.execute('''SELECT count(*) as c, author
+                          FROM messages
+                          WHERE (server=? AND unix > ?)
+                          GROUP BY author
+                          ORDER BY c DESC;''',
+                          (ctx.guild.id, diff))
+        record = self.c.fetchall()
+        e = discord.Embed(title=f"Activity for the last {unit}", description=f"{sum(x[0] for x in record)} messages from {len(record)} chatters")
+        for n, v in enumerate(record[:25]):
+            try:
+                name = ctx.guild.get_member(int(v[1])).name
+            except AttributeError:
+                name = f"Unknown member"
+            e.add_field(name=f"{n+1}. {name}", value=f"{v[0]} messages")
+        
+        await ctx.send(embed=e)
+
+    
+    
+    
+    @activity.command(aliases=['characters', 'words'])
+    async def char(self, ctx, unit: str="day"):
+        if ctx.author.id != 106429844627169280 and unit != "day":
+            return await ctx.send("activity char for timespans over a day takes too long, sorry!")
+        unit = unit.lower()
+        time_dict = {
+            "day": 86400,
+            "week": 604800,
+            "month": 2592000,
+            "year": 31556952
+        }
+        if unit not in time_dict:
+            unit = "month"
+        time_seconds = time_dict.get(unit, 2592000)
+        now = int(datetime.datetime.utcnow().timestamp())
+        diff = now - time_seconds
+        self.c.execute('''SELECT SUM(LENGTH(content)) as c, author, COUNT(*)
+                          FROM messages
+                          WHERE (server=? AND unix > ?)
+                          GROUP BY author
+                          ORDER BY c DESC LIMIT 25;''',
+                          (ctx.guild.id, diff))
+        record = self.c.fetchall()
+        e = discord.Embed(title="Current leaderboard", description=f"Activity for the last {unit}")
+        for n, v in enumerate(record):
+            try:
+                name = ctx.guild.get_member(int(v[1])).name
+            except AttributeError:
+                name = f"Unknown member"
+            ratio = int(v[0] / v[2])
+            e.add_field(name=f"{n+1}. {name}", value=f"{v[0]:,} chars ({ratio} c/m)")
+        
+        await ctx.send(embed=e)
 
     @commands.command(aliases=['stats'])
     async def about(self, ctx):
@@ -199,12 +296,19 @@ async def on_error(self, event, *args, **kwargs):
     e = discord.Embed(title='Event Error', colour=0xa32952)
     e.add_field(name='Event', value=event)
     e.description = '```py\n%s\n```' % traceback.format_exc()
+    try:
+        big_xd = f"Name: {args[0].guild.name}\nID: {args[0].guild.id}"
+        e.add_field(name="location", value=big_xd)
+    except:
+        pass
+
+
     e.timestamp = datetime.datetime.utcnow()
     ch = self.get_channel(LOGGING_CHANNEL)
     try:
         await ch.send(embed=e)
     except:
-        pass
+        await ch.send("tried sending an error but no xd")
 
 
 def setup(bot):

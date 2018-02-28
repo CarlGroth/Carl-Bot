@@ -42,8 +42,7 @@ class RollParser(commands.Converter):
     """
     async def convert(self, ctx, argument):
         matches = re.search(r"(?:(\d*)-)?(\d*)", argument)
-        print(f"Matches= {matches}")
-        minshit = matches.group(1) or 0
+        minshit = matches.group(1) or 1
         maxshit = matches.group(2) or 100
         return (int(minshit), int(maxshit))
 
@@ -63,11 +62,11 @@ class Ping:
     @commands.command()
     async def roll(self, ctx, *, results: RollParser = None):
         """
-        works like the wow version :prefix:roll [lower-]upper
+        Works like the wow version !roll [[lower-]upper]
         """
-        results = results if results is not None else (0, 100)
+        results = results if results is not None else (1, 100)
         roll = random.randint(results[0], results[1])
-        await ctx.send(f"{ctx.author.name} rolls {roll} ({results[0]}-{results[1]})")
+        await ctx.send(f"**{ctx.author.name}** rolls **{roll}** ({results[0]}-{results[1]})")
 
     @commands.command()
     async def ping(self, ctx):
@@ -76,14 +75,17 @@ class Ping:
         """
         await ctx.send("pong! {0:.2f}ms".format(self.bot.latency * 1000))
 
-    @commands.command()
-    async def bread(self, ctx, member: discord.Member=None):
-        """
-        Sends bread to the mentioned user
-        god I fucking hate this command
-        """
-        user = ctx.message.author if member is None else member
-        await user.send(random.choice(LISTOFBIRDS))
+    # @commands.command()
+    # async def bread(self, ctx, member: discord.Member=None):
+    #     """
+    #     Sends bread to the mentioned user
+    #     god I fucking hate this command
+    #     """
+    #     if ctx.guild.id != 207943928018632705:
+    #         return
+
+    #     user = ctx.message.author if member is None else member
+    #     await user.send(random.choice(LISTOFBIRDS))
 
     @commands.command()
     async def echo(self, ctx, destination: discord.TextChannel=None, *, msg: str):
@@ -92,10 +94,11 @@ class Ping:
         """
         # This wasn't always a thing lmao
         if not destination.permissions_for(ctx.author).send_messages:
-            return
+            return await ctx.message.add_reaction("\N{WARNING SIGN}")
         msg = clean_string(msg)
         destination = ctx.message.channel if destination is None else destination
         await destination.send(msg)
+        return await ctx.message.add_reaction("\N{WHITE HEAVY CHECK MARK}")
 
     async def get_cute(self):
         """

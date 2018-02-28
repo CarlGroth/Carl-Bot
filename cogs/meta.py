@@ -72,7 +72,7 @@ class Meta:
         self.bot = bot
 
     @commands.group(name='prefix', invoke_without_command=True)
-    async def prefix(self, ctx):
+    async def _prefix(self, ctx):
         """Manages the server's custom prefixes.
 
         If called without a subcommand, this will list the currently set
@@ -92,7 +92,7 @@ class Meta:
             f'{index}. {elem}' for index, elem in enumerate(prefixes, 1))
         await ctx.send(embed=e)
 
-    @prefix.command(name='add', ignore_extra=False)
+    @_prefix.command(name='add', ignore_extra=False)
     @checks.admin_or_permissions(manage_server=True)
     async def prefix_add(self, ctx, prefix: Prefix):
         if "@everyone" in prefix:
@@ -116,7 +116,7 @@ class Meta:
         if isinstance(error, commands.TooManyArguments):
             await ctx.send("You've given too many prefixes. Either quote it or only do it one by one.")
 
-    @prefix.command(name='remove', aliases=['delete'], ignore_extra=False)
+    @_prefix.command(name='remove', aliases=['delete'], ignore_extra=False)
     @checks.admin_or_permissions(manage_server=True)
     async def prefix_remove(self, ctx, prefix: Prefix):
 
@@ -134,7 +134,7 @@ class Meta:
         else:
             await ctx.send("{} removed".format(prefix))
 
-    @prefix.command(name='clear')
+    @_prefix.command(name='clear')
     @checks.admin_or_permissions(manage_server=True)
     async def prefix_clear(self, ctx):
 
@@ -147,7 +147,7 @@ class Meta:
         user = ctx.author
         url = 'https://od-api.oxforddictionaries.com/api/v1/entries/en/' + word.lower()
         async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers={'app_id': '3177862a', 'app_key': 'token fuck off'}) as r:
+            async with session.get(url, headers={'app_id': '3177862a', 'app_key': '5ce390244f464ed805eac645f5167322'}) as r:
                 try:
                     jsonthing = await r.json()
                 except Exception as e:
@@ -211,7 +211,7 @@ class Meta:
         try:
             destination = discord.utils.find(
                 lambda m: "bot" in m.name, ctx.guild.channels)
-            xd = await destination.send(ctx.author.mention)
+            #xd = await destination.send(ctx.author.mention)
 
         except:
             destination = ctx.message.channel
@@ -345,23 +345,13 @@ class Meta:
 
     @commands.command(name='invite')
     async def cmd_invite(self, ctx):
-        """Joins a server."""
-        perms = discord.Permissions.none()
-        perms.read_messages = True
-        perms.send_messages = True
-        perms.manage_roles = True
-        perms.ban_members = True
-        perms.kick_members = True
-        perms.manage_messages = True
-        perms.embed_links = True
-        perms.read_message_history = True
-        perms.attach_files = True
-        perms.add_reactions = True
-        perms.view_audit_log = True
-        await ctx.send(discord.utils.oauth_url(self.bot.client_id, perms))
+        e = discord.Embed(title="Invite links", description=f"[Invite link (recommended)](https://discordapp.com/oauth2/authorize?client_id=235148962103951360&scope=bot&permissions=470150352)\n[Invite link (admin)](https://discordapp.com/oauth2/authorize?client_id=235148962103951360&scope=bot&permissions=66321471)")
+        
+        await ctx.send(embed=e)
+
 
     @commands.command(hidden=True)
-    async def cud(self):
+    async def cud(self, ctx):
         """pls no spam"""
 
         for i in range(3):
@@ -370,10 +360,25 @@ class Meta:
 
         await ctx.send('go')
 
-    @commands.command(pass_context=True)
-    async def help(self, ctx):
-        url = r"https://github.com/CarlGroth/Carl-Bot/blob/master/readme.md"
-        await ctx.author.send('Check out the commands on github: {}\nor PM Carl if you have any unanswered questions.'.format(url))
+
+    @commands.command()
+    async def discrim(self, ctx, number: str=None):
+        members = self.bot.get_all_members()
+        if number is None or len(number) != 4:
+            number = ctx.author.discriminator
+        good_boys = list(set([x.name for x in members if x.discriminator == number]))
+        if not good_boys:
+            return await ctx.send("Couldn't find any users with that discriminator, invite me to more servers to improve the functionality of this command ;)")
+        good_boys = '\n'.join(good_boys)
+        await ctx.send(f"Found the following users with the discriminator {number}\n```\n{good_boys}\n```")
+
+
+    # @commands.command(pass_context=True)
+    # async def help(self, ctx):
+    #     url = r"https://github.com/CarlGroth/Carl-Bot/blob/master/readme.md"
+    #     e = discord.Embed(title="Helpful links", description=f"[Invite link (recommended)](https://discordapp.com/oauth2/authorize?client_id=235148962103951360&scope=bot&permissions=470150352)\n[Invite link (admin)](https://discordapp.com/oauth2/authorize?client_id=235148962103951360&scope=bot&permissions=66321471)\n[Bot support server](https://discord.gg/DSg744v)")
+        
+    #     await ctx.author.send('Check out the commands on github: {}\nPM Carl#0001 or join the support server if you have any unanswered questions.'.format(url), embed=e)
 
 
 def setup(bot):

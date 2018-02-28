@@ -8,8 +8,10 @@ import string
 import discord
 import aiohttp
 
+from collections import Counter
 from io import BytesIO
 from discord.ext import commands
+from discord.ext.commands.cooldowns import BucketType
 
 
 def beaufort_scale(speed):
@@ -77,13 +79,32 @@ def pretty_weather(weather):  # this is literally the dumbest thing my bot has
 
 smallcaps_alphabet = "ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘǫʀꜱᴛᴜᴠᴡxʏᴢ1234567890"
 
+uppercase_fraktur = "𝔄𝔅ℭ𝔇𝔈𝔉𝔊ℌℑ𝔍𝔎𝔏𝔐𝔑𝔒𝔓𝔔ℜ𝔖𝔗𝔘𝔙𝔚𝔛𝔜ℨ"
+lowercase_fraktur = "𝔞𝔟𝔠𝔡𝔢𝔣𝔤𝔥𝔦𝔧𝔨𝔩𝔪𝔫𝔬𝔭𝔮𝔯𝔰𝔱𝔲𝔳𝔴𝔵𝔶𝔷1234567890"
+
+uppercase_boldfraktur = "𝕬𝕭𝕮𝕯𝕰𝕱𝕲𝕳𝕴𝕵𝕶𝕷𝕸𝕹𝕺𝕻𝕼𝕽𝕾𝕿𝖀𝖁𝖂𝖃𝖄𝖅"
+lowercase_boldfraktur = "𝖆𝖇𝖈𝖉𝖊𝖋𝖌𝖍𝖎𝖏𝖐𝖑𝖒𝖓𝖔𝖕𝖖𝖗𝖘𝖙𝖚𝖛𝖜𝖝𝖞𝖟1234567890"
+
+
+double_uppercase = "𝔸𝔹ℂ𝔻𝔼𝔽𝔾ℍ𝕀𝕁𝕂𝕃𝕄ℕ𝕆ℙℚℝ𝕊𝕋𝕌𝕍𝕎𝕏𝕐ℤ"
+
+double_lowercase = "𝕒𝕓𝕔𝕕𝕖𝕗𝕘𝕙𝕚𝕛𝕜𝕝𝕞𝕟𝕠𝕡𝕢𝕣𝕤𝕥𝕦𝕧𝕨𝕩𝕪𝕫𝟙𝟚𝟛𝟜𝟝𝟞𝟟𝟠𝟡𝟘"
+
+bold_fancy_lowercase = "𝓪𝓫𝓬𝓭𝓮𝓯𝓰𝓱𝓲𝓳𝓴𝓵𝓶𝓷𝓸𝓹𝓺𝓻𝓼𝓽𝓾𝓿𝔀𝔁𝔂𝔃1234567890"
+bold_fancy_uppercase = "𝓐𝓑𝓒𝓓𝓔𝓕𝓖𝓗𝓘𝓙𝓚𝓛𝓜𝓝𝓞𝓟𝓠𝓡𝓢𝓣𝓤𝓥𝓦𝓧𝓨𝓩"
+
+fancy_lowercase = "𝒶𝒷𝒸𝒹𝑒𝒻𝑔𝒽𝒾𝒿𝓀𝓁𝓂𝓃𝑜𝓅𝓆𝓇𝓈𝓉𝓊𝓋𝓌𝓍𝓎𝓏𝟣𝟤𝟥𝟦𝟧𝟨𝟩𝟪𝟫𝟢"
+fancy_uppercase ="𝒜𝐵𝒞𝒟𝐸𝐹𝒢𝐻𝐼𝒥𝒦𝐿𝑀𝒩𝒪𝒫𝒬𝑅𝒮𝒯𝒰𝒱𝒲𝒳𝒴𝒵"
+
+
+
 alphabet = dict(zip("abcdefghijklmnopqrstuvwxyz1234567890", range(0, 36)))
 uppercase_alphabet = dict(zip("ABCDEFGHIJKLMNOPQRSTUVWXYZ", range(0, 26)))
 punctuation = dict(
     zip("§½!\"#¤%&/()=?`´@£$€{[]}\\^¨~'*<>|,.-_:", range(0, 37)))
 space = " "
 aesthetic_space = '\u3000'
-aesthetic_punctuation = "§½！\"＃¤％＆／（）＝？`´＠£＄€｛[]｝＼＾¨~＇＊＜＞|，．－＿："
+aesthetic_punctuation = "§½！\"＃¤％＆／（）＝？`´＠£＄€｛［］｝＼＾¨~＇＊＜＞|，．－＿："
 aesthetic_lowercase = "ａｂｃｄｅｆｇｈｉｊｋｌｍｎｏｐｑｒｓｔｕｖｗｘｙｚ１２３４５６７８９０"
 aesthetic_uppercase = "ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯＰＱＲＳＴＵＶＷＸＹＺ"
 
@@ -106,6 +127,76 @@ def aesthetics(string):
                 returnthis += aesthetic_punctuation[punctuation[letter]]
             elif letter == space:
                 returnthis += aesthetic_space
+            else:
+                returnthis += letter
+    return returnthis
+
+def double_font(string):
+    returnthis = ""
+    for word in string:
+        for letter in word:
+            if letter in alphabet:
+                returnthis += double_lowercase[alphabet[letter]]
+            elif letter in uppercase_alphabet:
+                returnthis += double_uppercase[uppercase_alphabet[letter]]
+            elif letter == space:
+                returnthis += " "
+            else:
+                returnthis += letter
+    return returnthis
+
+def fraktur(string):
+    returnthis = ""
+    for word in string:
+        for letter in word:
+            if letter in alphabet:
+                returnthis += lowercase_fraktur[alphabet[letter]]
+            elif letter in uppercase_alphabet:
+                returnthis += uppercase_fraktur[uppercase_alphabet[letter]]
+            elif letter == space:
+                returnthis += " "
+            else:
+                returnthis += letter
+    return returnthis
+
+def bold_fraktur(string):
+    returnthis = ""
+    for word in string:
+        for letter in word:
+            if letter in alphabet:
+                returnthis += lowercase_boldfraktur[alphabet[letter]]
+            elif letter in uppercase_alphabet:
+                returnthis += uppercase_boldfraktur[uppercase_alphabet[letter]]
+            elif letter == space:
+                returnthis += " "
+            else:
+                returnthis += letter
+    return returnthis
+
+def fancy(string):
+    returnthis = ""
+    for word in string:
+        for letter in word:
+            if letter in alphabet:
+                returnthis += fancy_lowercase[alphabet[letter]]
+            elif letter in uppercase_alphabet:
+                returnthis += fancy_uppercase[uppercase_alphabet[letter]]
+            elif letter == space:
+                returnthis += " "
+            else:
+                returnthis += letter
+    return returnthis
+
+def bold_fancy(string):
+    returnthis = ""
+    for word in string:
+        for letter in word:
+            if letter in alphabet:
+                returnthis += bold_fancy_lowercase[alphabet[letter]]
+            elif letter in uppercase_alphabet:
+                returnthis += bold_fancy_uppercase[uppercase_alphabet[letter]]
+            elif letter == space:
+                returnthis += " "
             else:
                 returnthis += letter
     return returnthis
@@ -158,9 +249,10 @@ class CoolKidsClub:
         if ctx.message.mentions:
             return
         if "," in ctx.message.content:
-            real_choices = ctx.message.content.split()
-            real_choices = real_choices[1:]
-            real_choices = ' '.join(real_choices)
+            # real_choices = ctx.message.content.split()
+            # real_choices = real_choices[1:]
+            
+            real_choices = ' '.join(choices)
             real_choices = real_choices.split(",")
         else:
             real_choices = choices
@@ -169,6 +261,26 @@ class CoolKidsClub:
     @commands.command(name='aesthetics', aliases=['ae'])
     async def _aesthetics(self, ctx, *, sentence: str):
         await ctx.send(aesthetics(sentence))
+
+    @commands.command(name='fraktur')
+    async def _fraktur(self, ctx, *, sentence: str):
+        await ctx.send(fraktur(sentence))
+
+    @commands.command(name='boldfaktur')
+    async def _boldfaktur(self, ctx, *, sentence: str):
+        await ctx.send(bold_fraktur(sentence))
+
+    @commands.command(name='fancy', aliases=['ff'])
+    async def _fancy(self, ctx, *, sentence: str):
+        await ctx.send(fancy(sentence))
+
+    @commands.command(name='boldfancy', aliases=['bf'])
+    async def _bold_fancy(self, ctx, *, sentence: str):
+        await ctx.send(bold_fancy(sentence))
+
+    @commands.command(name='double', aliases=['ds'])
+    async def _doublestruck(self, ctx, *, sentence: str):
+        await ctx.send(double_font(sentence))
 
     @commands.command(name='smallcaps', aliases=['sc'])
     async def _smallcaps(self, ctx, *, sentence: str):
@@ -198,14 +310,13 @@ class CoolKidsClub:
         for m in offline:
             await m.add_roles(poe_role, reason="automatic poehere")
         await poe_role.edit(mentionable=False)
-
-    @commands.group(invoke_without_command=True, hidden=True)
-    async def sicklad(self, ctx, member: discord.Member=None):
+    #@commands.cooldown(1, 900, BucketType.user)
+    @commands.group(no_pm=True, invoke_without_command=True, hidden=True)
+    async def sicklad(self, ctx, user: discord.Member):
         """
         For when someone's really great
         """
 
-        user = ctx.author if member is None else member
         self.c.execute('''SELECT sicklad
                           FROM users
                           WHERE (server=? AND id=?)''',
@@ -214,6 +325,7 @@ class CoolKidsClub:
 
         if user == ctx.author:
             await ctx.send("You sure are.")
+            ctx.command.reset_cooldown(ctx)
             return
         if not sicklad_value:
             self.c.execute('''UPDATE users
@@ -229,8 +341,9 @@ class CoolKidsClub:
                            (user.id, ctx.guild.id))
             self.conn.commit()
             await ctx.send("**{0}** now has **{1}** sicklad points.".format(user.name.replace("_", "\\_"), sicklad_value + 1))
-
-    @sicklad.command(name="top", aliases=['leaderboard', 'leaderboards', 'highscore', 'highscores', 'hiscores'])
+   
+    @commands.cooldown(5,60, BucketType.guild)
+    @sicklad.command(no_pm=True, name="top", aliases=['leaderboard', 'leaderboards', 'highscore', 'highscores', 'hiscores'])
     async def sickladtop(self, ctx):
         self.c.execute('''SELECT *
                           FROM users
@@ -257,7 +370,7 @@ class CoolKidsClub:
                       icon_url=self.bot.user.avatar_url)
         await ctx.send(embed=em)
 
-    @commands.group(invoke_without_command=True, hidden=True)
+    @commands.group(no_pm=True, invoke_without_command=True, hidden=True)
     async def retard(self, ctx, member: discord.Member=None, *, reason: str = None):
         user = ctx.message.author if member is None else member
         self.c.execute('''SELECT retard
@@ -287,11 +400,12 @@ class CoolKidsClub:
                 await ctx.send("**{0}** now has **{1}** coins.".format(user.name.replace("_", "\\_"), retard + 1))
             else:
                 self.c.execute('UPDATE users SET retard = retard + 1 WHERE (id=? AND server=?)',
-                               (ctx.message.author.id, ctx.guild.id))
+                               (user.id, ctx.guild.id))
                 self.conn.commit()
-                await ctx.send("**{0}** just tipped **{1} 1** retard coin, reason: `{2}`\n**{1}** now has **{3}** coins.".format(ctx.message.author.name.replace("_", "\\_"), user.name.replace("_", "\\_"), reason, retard + 1))
+                fmt = '**{0}** just tipped **{1} 1** retard coin with the reason "{2}"\n**{1}** now has **{3}** coins.'.format(ctx.message.author.name.replace("_", "\\_"), user.name.replace("_", "\\_"), reason, retard + 1)
+                await ctx.send(clean_string(fmt))
 
-    @retard.command(name="top", aliases=['leaderboard', 'leaderboards', 'highscore', 'highscores', 'hiscores'])
+    @retard.command(no_pm=True, name="top", aliases=['leaderboard', 'leaderboards', 'highscore', 'highscores', 'hiscores'])
     async def _top(self, ctx):
         a = self.c.execute(
             'SELECT * FROM users WHERE server=? ORDER BY retard DESC LIMIT 10', (ctx.guild.id,))
@@ -318,22 +432,36 @@ class CoolKidsClub:
     async def urbandictionary(self, ctx, *, query: str):
         query = ''.join(ctx.message.content.split()[1:])
         url = r"http://api.urbandictionary.com/v0/define?term={}".format(query)
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as r:
-                definition = await r.json()
+        async with self.bot.session.get(url) as r:
+            definition = await r.json()
         try:
             definition = "**{}**\n{}\n\n*{}*".format(definition["list"][0]["word"].capitalize(
             ), definition["list"][0]["definition"], definition["list"][0]["example"])
             definition = definition.replace("<b>", "**")
             definition = definition.replace("</b>", "**")
         except:
-            await ctx.send('No definition found for "{}", unlucky.'.format(query))
+            await ctx.send('No definition found for "{}", unlucky.'.format(query).replace("@", ""))
             return
         try:
             # fuck off !ud @everyone
             await ctx.send(clean_string(definition))
         except discord.HTTPException:
             await ctx.send("Definition over 2k characters :/")
+
+
+    @commands.command()
+    async def wf(self, ctx, *, member: discord.Member=None):
+        if member is None:
+            member = ctx.author
+
+        self.c.execute('''SELECT content FROM messages WHERE (server=? AND author=?)''', (ctx.guild.id, member.id))
+        all_msgs = self.c.fetchall()
+        all_msgs = [x[0] for x in all_msgs]
+        all_msgs = ' '.join(all_msgs).split()
+        all_msgs = list(filter(lambda x: len(x) > 3 and x.startswith != "!", all_msgs))
+        print(Counter(all_msgs).most_common()[:24])
+        
+
 
     @commands.command(name="info", aliases=['i'], no_pm=True)
     async def _i(self, ctx, *, member: discord.Member=None):
@@ -408,7 +536,10 @@ class CoolKidsClub:
         em.add_field(name="ID", value=user.id, inline=True)
         em.add_field(name="Postcount", value=postcount_rank, inline=True)
         if retard > 0:
-            em.add_field(name="Retard coins", value=retard_rank, inline=True)
+            if ctx.guild.id == 113103747126747136:
+                em.add_field(name="Twat coins", value=retard_rank, inline=True)
+            else:
+                em.add_field(name="Retard coins", value=retard_rank, inline=True)
         if sicklad > 0:
             em.add_field(name="Sicklad points",
                          value=sicklad_rank, inline=True)
@@ -419,7 +550,7 @@ class CoolKidsClub:
         # em.set_thumbnail(url=avatar)
         await ctx.send(embed=em)
 
-    @commands.group(aliases=['weather'], invoke_without_command=True)
+    @commands.group(no_pm=True, aliases=['weather'], invoke_without_command=True)
     async def temp(self, ctx, *, city: str = None):
         self.c.execute('''SELECT location
                           FROM users
@@ -447,7 +578,7 @@ class CoolKidsClub:
                 await ctx.send("Your home was automatically set to **{}**, `!temp` will now default to it.".format(clean_string(city)))
 
         async with aiohttp.ClientSession() as session:
-            async with session.get('http://api.openweathermap.org/data/2.5/weather?q=' + city + "&weathertokenxd") as r:
+            async with session.get('http://api.openweathermap.org/data/2.5/weather?q=' + city + "&appid=TOKEN") as r:
                 json_object = await r.json()
         if json_object['cod'] == '404':
             return await ctx.send("City not found")
@@ -471,7 +602,7 @@ class CoolKidsClub:
         # em.set_thumbnail(url=user.avatar_url)
         await ctx.send(embed=em)
 
-    @temp.command(name="home")
+    @temp.command(no_pm=True, name="home")
     async def _home(self, ctx, *, city: str):
         self.c.execute('UPDATE users SET location=? WHERE id=?',
                        (city, ctx.message.author.id,))
@@ -489,7 +620,7 @@ class CoolKidsClub:
         nicks = nicks[0].split(',')
         #nicks = nicks[::-1]
         nicknames = ', '.join(nicks)
-        nicknames = re.sub('@', '@\u200b', nicknames.replace("_", "\\_"))
+        nicknames = re.sub('@', '@\u200b', nicknames.replace("_", "\\_").replace("`", "\`"))
         if len(nicknames) < 1900:
             await ctx.send("**Nickname history for {}#{}:**\n{}".format(user.name, user.discriminator, nicknames))
         else:
@@ -530,8 +661,8 @@ class CoolKidsClub:
 
         face_filter = face_filter.lower()
 
-        if face_filter not in ['smile', 'smile_2', 'hot', 'old', 'young', 'female', 'male']:
-            return await ctx.send("Unsupported filter. Try smile, smile_2, hot, old, young, male.")
+        # if face_filter not in ['smile', 'smile_2', 'hot', 'old', 'young', 'female', 'male']:
+        #     return await ctx.send("Unsupported filter. Try smile, smile_2, hot, old, young, male.")
 
         if image_url is not None:
             image_url = image_url
@@ -563,25 +694,15 @@ class CoolKidsClub:
             async with session.get(URL + '/api/v2.3/photos/{}/filters/{}?cropped=true'.format(code, face_filter),
                                    headers={'User-Agent': USER_AGENT, 'X-FaceApp-DeviceID': DEVICE_ID}) as r:
                 face = await r.read()
-                print(face)
         send_me = BytesIO(face)
         await ctx.send(file=discord.File(fp=send_me, filename="hehe.png"))
 
     @commands.group(invoke_without_command=True)
     async def speak(self, ctx, repeats: int = 5, *, member: discord.Member=None):
         user = ctx.message.author if member is None else member
-        if "bot" not in ctx.message.channel.name:
-            try:
-                destination = discord.utils.find(
-                    lambda m: "bot" in m.name, ctx.guild.channels)
-                await destination.send(ctx.message.author.mention)
-            except:
-                destination = ctx.message.channel
-        else:
-            destination = ctx.message.channel
 
         a = self.c.execute(
-            'SELECT content FROM messages WHERE author=?', (user.id,))
+            'SELECT content FROM messages WHERE (author=? AND server=?)', (user.id, ctx.guild.id))
         a = a.fetchall()
         text = '\n'.join([x[0] for x in a if len(x[0]) > 20])
         text_model = markovify.NewlineText(text)
@@ -595,21 +716,13 @@ class CoolKidsClub:
             except:
                 continue
 
-        await destination.send(speech)
+        await ctx.send(speech)
 
     @speak.command(name="channel")
     async def _channel(self, ctx, channel: discord.TextChannel=None):
+        if ctx.author.id != 106429844627169280:
+            return
         # For when you want a markov chain for the entire channel
-        if "bot" not in ctx.message.channel.name:
-            try:
-                destination = discord.utils.find(
-                    lambda m: "bot" in m.name, ctx.guild.channels)
-                # await self.bot.delete_message(ctx.message)
-                await destination.send(ctx.message.author.mention)
-            except:
-                destination = ctx.message.channel
-        else:
-            destination = ctx.message.channel
         channel = channel if channel is not None else ctx.channel
         self.c.execute('''SELECT content
                           FROM messages
@@ -624,10 +737,10 @@ class CoolKidsClub:
             try:
                 variablename = text_model.make_short_sentence(
                     140, state_size=2).replace("@", "@ ")
-                speech += "{}\n\n".format(variablename)
+                speech += "{}\n\n".format(clean_string(variablename))
             except:
                 continue
-        await destination.send(speech)
+        await ctx.send(speech)
 
     @commands.command()
     async def dice(self, ctx, sides: int=6, rolls: int=1):
@@ -649,6 +762,72 @@ class CoolKidsClub:
     async def coinflip(self, ctx):
         await ctx.send(random.choice(('Heads', 'Tails')))
 
+    @commands.cooldown(1, 900, BucketType.user)
+    @commands.group(no_pm=True, invoke_without_command=True, hidden=True)
+    async def twat(self, ctx, member: discord.Member=None, *, reason: str = None):
+        user = ctx.message.author if member is None else member
+        self.c.execute('''SELECT retard
+                          FROM users
+                          WHERE (server=? AND id=?)''',
+                       (ctx.guild.id, user.id))
+        retard = self.c.fetchone()[0]
+        leftover_args = ctx.message.content.split()
+        leftover_args = leftover_args[1:]
+        if user == ctx.message.author:
+            await ctx.send("You sure are.")
+            return
+        if not retard:
+            self.c.execute('''UPDATE users
+                              SET retard = retard + 1
+                              WHERE (id=? AND server=?)''',
+                           (user.id, ctx.guild.id))
+            self.conn.commit()
+            await ctx.send("Welcome to the twat club, **{0}**".format(user.name))
+        else:
+            if reason is None:
+                self.c.execute('''UPDATE users
+                                  SET retard = retard + 1
+                                  WHERE (id=? AND server=?)''',
+                               (user.id, ctx.guild.id))
+                self.conn.commit()
+                await ctx.send("**{0}** now has **{1}** twat coins.".format(user.name.replace("_", "\\_"), retard + 1))
+            else:
+                self.c.execute('UPDATE users SET retard = retard + 1 WHERE (id=? AND server=?)',
+                               (ctx.message.author.id, ctx.guild.id))
+                self.conn.commit()
+                fmt = '**{0}** just tipped **{1} 1** twat coin with the reason "{2}"\n**{1}** now has **{3}** coins.'
+                await ctx.send(clean_string(fmt.format(ctx.author.name.replace("_", "\\_"), user.name.replace("_", "\\_"), reason, retard + 1)))
+    @commands.cooldown(5, 60, BucketType.guild)
+    @twat.command(no_pm=True, name="top", aliases=['leaderboard', 'leaderboards', 'highscore', 'highscores', 'hiscores'])
+    async def twat_top(self, ctx):
+        a = self.c.execute(
+            'SELECT * FROM users WHERE (server=? AND retard > 0) ORDER BY retard DESC LIMIT 10', (ctx.guild.id,))
+        a = a.fetchall()
+        b = self.c.execute(
+            'SELECT SUM(retard) AS "hello" FROM users WHERE (server=? AND retard > 0)', (ctx.guild.id,))
+        try:
+            b = b.fetchone()[0]
+        except:
+            b = 0
+        self.c.execute('SELECT COUNT(retard) as "hello2" FROM users WHERE (server=? and retard > 0)',(ctx.guild.id,))
+        try:
+            c = self.c.fetchone()[0]
+        except:
+            c = 0
+        post_this = ""
+        rank = 1
+        for row in a:
+            name = f'<@{row[3]}>'
+            post_this += ("{}. {} : {}\n".format(rank, name, row[6]))
+            rank += 1
+
+        post_this += "\n**{0}** twat coins in total spread across **{1}** twats.".format(
+            b, c)
+        em = discord.Embed(title="Current standings:",
+                           description=post_this, colour=0xff855a)
+        em.set_author(name=self.bot.user.name,
+                      icon_url=self.bot.user.avatar_url)
+        await ctx.send(embed=em)
 
 def setup(bot):
     bot.add_cog(CoolKidsClub(bot))
