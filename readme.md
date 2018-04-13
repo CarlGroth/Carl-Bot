@@ -83,7 +83,8 @@ Inspired by highlight bot, Carlbot now also does highlighting. Highlighting mean
 
 |Name|Aliases   |Args   |Example   |Usage
 |---|---|---|---|---|
-|!hl add   |+   |word   |!hl add carl    |Adds a word that will notify you.   |
+|!hl add   |+   |word   |!hl add carl    |Adds a word that will notify you. **IMPORTANT:** The bot tries to guess when you're aware of what's being typed and won't notify you if you've typed in the past 10 minutes, to see if your highlights work, please use `!hl match <sentence>`   |
+|!hl match| m |Sentence | !hl match carl is cute | Tests a sentence and sees which if any words would notify you.
 |!hl block   |--   |member or channel   |!hl block @Kintark#0588   |Messages sent in this channel/from this user won't notify you.   |
 |!hl unblock   |--   | member or channel  | !hl unblock #general  | Unblocks the user/channel   |
 |!hl show   |--   | --  | --  |  Shows your words as the bot sees them, if your words look wrong ("barri" instead of "barry" for instance) it's because of [word stemming](https://en.wikipedia.org/wiki/Stemming) |
@@ -257,34 +258,40 @@ Star messages, have them posted to a channel. It's a fun way to save funny/inter
 |!commandstats | -- | -- | -- | How many times each commands have been used since the bot was started |
 
 
-## Things that aren't commands
-
-Do a wowhead search by enclosing your query with [[double square brackets]]
-
-Direct file uploads of the filetype `.mkv .mov .mp4 .webm` will prompt the user to upload it to streamable for it to embed.
-
 
 
 
 # Tags
 
-Tags are easy to learn, but very powerful. With some ingenuity you can create your own, dynamic commands. To aid with this, dynamic "blocks" can be added. It is for instance entirely possible to create an 8ball command, a !hug command and many other things using just tags.
+Tags are easy to use, but very powerful. With some ingenuity you can create your own, dynamic commands. To aid with this, dynamic "blocks" can be added. It is for instance entirely possible to create an 8ball command, a !hug command and many other things using just tags.
 
 As of writing this, these blocks are:
 
-Random lists `#{comma, separated,#{nested args}}`
+**Random lists** `#{comma, separated,#{nested args}}`
 
-Math blocks `m{1 + 1 / (3 ^ 9)}`
+**Math blocks** `m{1 + 1 / (3 ^ 9)}`
 
-React blocks `react{:regional_indicator_f:}`
+**React blocks** `react{:regional_indicator_f:}`
 
    This will react to the post with the emojis placed inside the brackets
+   
+   Unsure what this could be used for? `!tag create doubt react{:regional_indicator_x:} https://i.imgur.com/EacBuLR.png`
 
-50/50 blocks `?{Will anyone see me?}`
+**50/50 blocks** `?{Will anyone see me?}`
 
-command blocks `c{temp stockholm}`
+**command blocks** `c{temp stockholm}`
+	
+Do you think that `!info` really should be called `!whois`? with command blocks you can do just that
 
-variable assignment `!{foo=This can be anything}`
+`!tag + whois c{info $args}`
+
+Maybe you think speak defaulting to 5 uses is an idiotic design choice, simply do
+
+`!tag + betterspeak c{speak 20 $args}`
+
+Important to note is that command tags are effectively not tags
+
+**variable assignment** `!{foo=This can be anything}`
 
 In addition to these blocks, it also comes with a few default arguments.  These are:
 
