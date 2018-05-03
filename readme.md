@@ -45,10 +45,10 @@ While Carlbot doesn't provide any commands to ban/purge/mute users, it offers ex
 |---|---|---|---|---|
 |**!ignore**   |--   | [channel] [command] [subcommand]   |!ignore #general temp home   |If no channel is specified, the current channel is ignored. If no command is specified, the mentioned channel will be ignored. If only a command is supplied, the command and all of its subcommands will be ignored in the specified channel. If everything is supplied, only the subcommand will be ignored in the specified channel. Mod (manage server) will bypass all of these.   |
 |**!ignore server**   | --  |--   |--   | This will ignore all channels and is future-proof.    |
-|**!ignore all**   |--   |[command] [subcommand]   |!ignore all sicklad top   |This is equal to typing !ignore channel command subcommand in all channels the bot can see, useful if you want to ignore a command in all channels except for one. This will not work for channels created in the future. If the command is already ignored in a channel, this will unignore it.  |
+|**!ignore all**   |--   |[command] [subcommand]   |!ignore all pc top   |This is equal to typing !ignore channel command subcommand in all channels the bot can see, useful if you want to ignore a command in all channels except for one. This will not work for channels created in the future. If the command is already ignored in a channel, this will unignore it.  |
 |**!unignore all**   | --  | --   | --  | Unignores all channels (this does not take ignored commands into account)   |
-|**!disable**   |--   | command [subcommand]  | !disable retard top  |This really disables the command globally from the server, not even manage server bypasses this.    |
-|**!enable**   |--   |--   |!enable retard top   |Enables a previously disabled command.   |
+|**!disable**   |--   | command [subcommand]  | !disable pc top  |This really disables the command globally from the server, not even manage server bypasses this.    |
+|**!enable**   |--   |--   |!enable pc top   |Enables a previously disabled command.   |
 |**!enable all**   |--   |--   |--   |Sets all commands to enabled.   |
 |**!disable all**   |--   |--   |--   |Sets all commands to disabled.  |
 |!enable list | disable list | -- | -- | Shows all enabled/disabled commands.|
@@ -154,7 +154,7 @@ Also supports `#{random lists, separated by commas}` and `m{1 + 1} math blocks` 
 |!choose   |pick, choice, select   |choices   |!choose go to sleep, play overwatch   |Picks one of your specified arguments. Use commas for multiple words.   |
 |!activity| -- | [day/week/month/year] | !activity week| Defaults to month, shows the 25 most active members by postcount for the specified timespan (that the bot has seen)
 |!urbandictionary   |!ud   |word   |!ud cleveland steamer   |Returns the urbandictionary definition for your word. @everyone proof. (looking at you, b1nzy)   |
-|!info   |i   |[member]   |!i @Carl#0080   |Returns Name, last 5 nicknames, id, postcount (that the bot has seen), retard coins if more than 0, sicklad points if more than 0, creation date, server join date    |
+|!info   |i   |[member]   |!i @Carl#0080   |Returns Name, last 5 nicknames, id, postcount (that the bot has seen), creation date, server join date  and some cool information related to these  |
 |!temp   |weather   |[city]   |!weather stockholm   |EXTREMELY typo proof. If no city is specified, it will give you info for your set home. If used for the first time, that city will be set as your home.   |
 |!temp home   |--   |city   |!temp home tampa   |Lets you set a city as your home for !temp to default to.  |
 |!nicknames   |nicks   |--   |--   |Shows you your nicknames history, duplicates are moved to the end of the list. The names are ordered from oldest to newest.    |
@@ -172,10 +172,6 @@ Also supports `#{random lists, separated by commas}` and `m{1 + 1} math blocks` 
 |---|---|---|---|---|
 |!postcount |pc| [member]| !pc @Carl#0080| Shows the amount of messages the bot has seen the member post.|
 |!postcount top| -- | -- | -- | Shows the all time 10 most active members as far as the bot's concerned.|
-|!retard | -- | [member] | !retard @Kintark#0588| Ever wanted someone to know that you think they're being stupid? !retard them.|
-|!retard top | -- | -- | -- | Shows the biggest retards on the server|
-|!sicklad | -- | [member] | !retard @Kintark#0588| Ever wanted someone to know that you like them without it feeling weird? !sicklad them.|
-|!sicklad top | -- | -- | -- | Shows the sickest lads on the server.|
 |!ae   |aesthetics   |text   |!sc 600 iq   |Returns your text as fullwidth. The example would return "６００ｉｑ"   |
 |!sc   |smallcaps   |text   |!sc neumann   |Returns your text as smallcaps. The example would return "ɴᴇᴜᴍᴀɴɴ"   |
 |!8ball   |--   |--   |!8ball will anyone ever love me?   |It's like any other 8ball command on discord. Annoying, useless and unreasonably popular.   |
@@ -234,14 +230,6 @@ Star messages, have them posted to a channel. It's a fun way to save funny/inter
 |!affix  |!m+, !affixes   |--   |--   |Shows which affixes are live for EU/NA (separates when they're different) and which ones are active in the coming weeks.   |
 |!w | wowhead | search | !w jeeves | This is like searching on wowhead.
 
-
-## User Bio
-
-|Name|Aliases   |Args   |Example   |Usage
-|---|---|---|---|---|
-|!bio   |--   |[member]   |!bio @Carl#0080   |Shows the user's saved bio, defaults to the user if member is left blank   |
-|!bio create   |+, add  |Text   |!bio + I really like discord bots   |Adds the text to your bio. If you already have a bio, you'll be prompted to either replace your current bio with it or append to it (see below)   |
-|!bio append   |+=   |Text   |!bio += and hot dogs too!   |Appends the text supplied on a new line to your bio   |
 
 ## Boring bot-related commands
 
