@@ -172,7 +172,7 @@ Also supports `#{random lists, separated by commas}` and `m{1 + 1} math blocks` 
 |---|---|---|---|---|
 |!postcount |pc| [member]| !pc @Carl#0080| Shows the amount of messages the bot has seen the member post.|
 |!postcount top| -- | -- | -- | Shows the all time 10 most active members as far as the bot's concerned.|
-|!ae   |aesthetics   |text   |!sc 600 iq   |Returns your text as fullwidth. The example would return "６００ｉｑ"   |
+|!ae   |aesthetics   |text   |!ae 600 iq   |Returns your text as fullwidth. The example would return "６００ｉｑ"   |
 |!sc   |smallcaps   |text   |!sc neumann   |Returns your text as smallcaps. The example would return "ɴᴇᴜᴍᴀɴɴ"   |
 |!8ball   |--   |--   |!8ball will anyone ever love me?   |It's like any other 8ball command on discord. Annoying, useless and unreasonably popular.   |
 |!echo | -- | message | !echo #general Is this enough to pass the turing test? | Makes the bot say the message in the mentioned channel|
