@@ -17,6 +17,23 @@ An alias is another way to call a command. For instance, `temp` and `weather` fu
 |**!prefix remove**   |delete   |prefix   |!prefix remove !   |Removes a prefix, same limits as !prefix add applies here, can't remove mentioning the bot.   |
 |**!prefix clear**   |--   |--   |--   |Removes all prefixes except mentioning the bot. This (obviously) means you need to mention the bot to register more prefixes   |
 
+
+## Reaction roles
+
+[Carlbot finally offers reaction roles, this is how they can look](https://i.imgur.com/tPNpyYN.png)
+
+|Name|Aliases   |Args   |Example   |Usage
+|---|---|---|---|---|
+|rr make| setup| --|--|Starts the interactive setup to get you started with reaction roles|
+|rr edit| --| message_id title \| description |!rr edit 23094823094823490 Games \| Click on the games you want to be notified by|Edits the title and description, works like it does in the make command|
+|rr remove| rm del| message_id emoji role|!rr remove 1928379128379 :poop: fortnite|Removes an emoji-reaction pair from the specified bot message (and more importantly, from the database)|
+|rr add| create| message_id emoji role|!rr add 1238901239812 :angel: pure|Adds the emoji-role pair to the message and the database.|
+|rr color|colour|message_id color|!rr color #00ee28|Changes the accent color of the specified  bot message|
+
+You add roles to yourself by clicking on the reactions, you need manage server to make the reaction message and both you and the bot has to be able to assign the roles (it will warn you about this while creating it)
+
+To remove a bot message, simply delete the message like you would delete any other message, it's handled by the bot automatically.
+
 ## Logging
 
 [Here's a screenshot showing how logging looks](https://i.imgur.com/bD5woF0.png)
