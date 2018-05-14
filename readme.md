@@ -24,15 +24,29 @@ An alias is another way to call a command. For instance, `temp` and `weather` fu
 
 |Name|Aliases   |Args   |Example   |Usage
 |---|---|---|---|---|
-|rr make| setup| --|--|Starts the interactive setup to get you started with reaction roles|
-|rr edit| --| message_id title \| description |!rr edit 23094823094823490 Games \| Click on the games you want to be notified by|Edits the title and description, works like it does in the make command|
-|rr remove| rm del| message_id emoji role|!rr remove 1928379128379 :poop: fortnite|Removes an emoji-reaction pair from the specified bot message (and more importantly, from the database)|
-|rr add| create| message_id emoji role|!rr add 1238901239812 :angel: pure|Adds the emoji-role pair to the message and the database.|
-|rr color|colour|message_id color|!rr color #00ee28|Changes the accent color of the specified  bot message|
+|**!rr make**| setup| --|--|Starts the interactive setup to get you started with reaction roles|
+|rr show| display| --| --| Shows the emoji-role pairs and their associated message id, useful for rr add|
+|**!rr edit**| --| message_id title \| description |!rr edit 23094823094823490 Games \| Click on the games you want to be notified by|Edits the title and description, works like it does in the make command|
+|**!rr remove**| rm del| role|!rr remove fortnite|Removes an emoji-reaction pair from the specified bot message (and more importantly, from the database)|
+|**!rr add**| create| message_id emoji role|!rr add 1238901239812 :angel: pure|Adds the emoji-role pair to the message and the database. **NOTE:** This message id can belong to other people than carlbot, and the same emoji can be used for different messages for different roles (useful for regional roles)|
+|**!rr color**|colour|message_id color|!rr color #00ee28|Changes the accent color of the specified  bot message|
 
 You add roles to yourself by clicking on the reactions, you need manage server to make the reaction message and both you and the bot has to be able to assign the roles (it will warn you about this while creating it)
 
 To remove a bot message, simply delete the message like you would delete any other message, it's handled by the bot automatically.
+
+## Moderation
+|Name|Aliases   |Args   |Example   |Usage
+|---|---|---|---|---|
+|**!purge**   |-- | howmany   | !purge 200  | Purges the last howmany messages.   |
+|**!purge bot** | -- | prefix howmany | !purge ? 20 | Purges the bot messages (and messages with the specified prefix) from the last howmany messages.|
+|**!purge contains** | -- | substring | !purge thanos | Purges messages containing the substring |
+|**!purge user** | -- | user howmany | !purge @Carl#0001 20 | Purges messages from the user |
+|**!ban** | forceban hackban | member or ID | !ban 102130103012 | Bans the member from the server regardless if they're in the server or not |
+|**!muterole** | -- | Role | !muterole kids table | Selects a role to use for the mute command |
+|**!muterole create** | -- | [name] | !muterole create shhh | Creates a new role, adds the role as a channel override with "send messages" turned off for all text channels and sets it as the server's muterole.
+|**!mute** | -- | user [time] | !mute @Carl#0001 20h45m | Mutes a member (using the muterole, read above) for the specified time. If no time is given, it will mute indefinitely.|
+|**!unmute** | -- | user | !unmute @Carl#0001 | Unmutes a member |
 
 ## Logging
 
@@ -56,7 +70,7 @@ To remove a bot message, simply delete the message like you would delete any oth
 
 ## Bot Moderation
 
-While Carlbot doesn't provide any commands to ban/purge/mute users, it offers exceptional tools to prevent abuse and restrict commands from troublemakers.
+Carlbot offers exceptional tools to prevent abuse and restrict commands from troublemakers.
 
 |Name|Aliases   |Args   |Example   |Usage
 |---|---|---|---|---|
@@ -284,7 +298,7 @@ As of writing this, these blocks are:
 
 **50/50 blocks** `?{Will anyone see me?}`
 
-**command blocks** `c{temp stockholm}`
+**Command blocks** `c{temp stockholm}`
 	
 Do you think that `!info` really should be called `!whois`? with command blocks you can do just that
 
@@ -294,7 +308,20 @@ Maybe you think speak defaulting to 5 uses is an idiotic design choice, simply d
 
 `!tag + betterspeak c{speak 20 $args}`
 
-Important to note is that command tags are effectively not tags
+Important to note is that command tags are effectively not tags in the sense that whatever else you put in a tag won't be sent
+
+**Action blocks** a{_action_} where _action_ is `pm` or `delete` (or both, comma separated)
+
+`pm` pms the content of the tag to the user who triggered the tag
+
+`delete` deletes the message that triggered the tag
+
+
+**Formatted time blocks** strf{_strftime_}
+
+Returns the current time formatted according to python's strftime, see http://strftime.org/ for more information.
+
+**Example:** `The current year is strf{%Y} hehe`
 
 **variable assignment** `!{foo=This can be anything}`
 
@@ -325,6 +352,18 @@ In addition to these blocks, it also comes with a few default arguments.  These 
 `$nmention` - The _name_ of $mention
 
 `$nauthor` - The _name_ of $author
+
+`$authorid` - The ID of the author
+
+`$userid` - The ID of the mentioned user if mentioned or the author if there aren't any mentions
+
+`$serverid` - The ID of the server
+
+`$randommember` - A random member's nickname
+
+`$randomonline` - A random online member's nickname (online in this case means not-offline i.e. away and busy count as online)
+
+`$randomoffline` - A random offline member's nickname
 
 `$1 $2 $3 etc` - Like $args but only the first, second, third word etc. `!foo bar baz` means $1=bar
 
