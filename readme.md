@@ -139,7 +139,7 @@ Very typo proof.
 |!role whitelist   |add, +, -, del, remove, delete   |role   |!role add python   |Adds the role to the whitelist so anyone can assign it to themselves. For this command to work both the bot and the command user needs to be able to assign the role to someone.   |
 |**!role unique**   |--   |--   |--   |Makes it so that any roles given will replace any other whitelisted roles. This can be useful for servers where it doesn't make any sense for someone to have multiple roles.   |
 |!roles   |--   |--   |--   |Shows all whitelisted roles   |
-|!role alias | -- | new_alias existing_role | !role alias shaman farseer | Aliasing roles is useful for servers with complicated role names. For instance, one wow server utilizing this command has a role called "Farseer" corresponding to the shaman class in wow. Using the command in the example allows people to get the "Farseer" role by typing "!role shaman".
+
 
 ### Automatic Roles
 
