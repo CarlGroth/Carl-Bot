@@ -22,6 +22,7 @@ An alias is another way to call a command. For instance, `temp` and `weather` fu
 |---|---|---|---|---|
 |!prefix   |--   |--   |--   |Lists the affixes currently in use by the server   |
 |**!prefix add**   |--   |prefix   |!prefix add "sudo "   |Adds a prefix to be used by the bot (limited to 10) **NOTE** if you want a two word prefix or a prefix with a space after it or an emoji you **must** use quotes, this is a discord limitation and can't be fixed   |
+|**!prefix set** | -- | prefix | !prefix set "haha " | Sets the specified prefix to be the ONLY prefix in the server
 |**!prefix remove**   |delete   |prefix   |!prefix remove !   |Removes a prefix, same limits as !prefix add applies here, can't remove mentioning the bot.   |
 |**!prefix clear**   |--   |--   |--   |Removes all prefixes except mentioning the bot. This (obviously) means you need to mention the bot to register more prefixes   |
 
@@ -96,6 +97,7 @@ Carlbot offers exceptional tools to prevent abuse and restrict commands from tro
 |!plonks   |--   |--   |--   |Displays all plonked users.   |
 |**!restrict**   |--   |command [subcommand]   |!restrict define   |This requires a bot channel to utilize. Makes it so that if the command is used outside of the bot channel, the bot will ping the user in the botchannel and give the results there instead.   |
 |**!unrestrict**   |--   |command [subcommand]   |!unrestrict d   | Unrestricts it. Like all commands where you pass in a command, aliases work just as well.   |
+|**!modrole** | -- | role | !modrole bot commander | Makes it so that any member with the specified role is seen as a moderator by the bot, this means being able to invoke any command in bold on this page. Only exception to this is the **!ban** command which still requires the member to be able to ban the target normally.
 
 ## Tags
 
@@ -105,7 +107,7 @@ Tags can be complicated, see [the full section](#tags-1) for a more thorough exp
 |---|---|---|---|---|
 |!tag   |tag get   |lookup   |!classdiscords   |This is how you get tags after they're saved.   |
 |!tag create   |add, +    |tagname tagcontent   |!tag + test Hello world   |Makes a tag named test with the content Hello world.   |
-|**!tag ++**   |--   |A pastebin link   |--   | Since tags can have an output shorter than their length, using !tag ++ allows you to make them  |
+|!tag ++   |--   |A pastebin link   |--   | Since tags can have an output shorter than their length, using !tag ++ allows you to make them  |
 |!tag append   |+=   |tagname tagcontent   |!tag += test and my mom   |Adds tagcontent to an already existing tag   |
 |!tag alias   | a  |alias tagname   |!tag alias testing test   | Creates a link to an already existing tag, changes made to the original tag means the aliased tag will also be changed. The name you want for the alias is the first argument, the already existing tag is the second.  |
 |!tag edit   |e   |tagname tagcontent   |!tag e test bye world   |Edits the content of an already existing tag.   |
@@ -114,6 +116,11 @@ Tags can be complicated, see [the full section](#tags-1) for a more thorough exp
 |**!tag mod**   |--   |tagname   |!tag mod test   |Makes it so that only mods can use the command (manage server)   |
 |!tag stats   |--   |[member]   |!tag stats @Carl#0080   |Shows information about the servers tags (uses, top 3, total number of tags). If you mention someone, it will show their tags instead.   |
 |!tag info   |--   | tagname  |!tag info test   | Shows some stats collected about the tag, uses, creation date, last update, owner.  |
+|**!tag ownership** | own | -- | -- | With this enabled (disabled by default) tags are 'owned' meaning that unless you're a mod, you can't edit, append or delete other people's tags (You can still create aliases to people's tags) |
+| **!tag modonly** | -- | -- | -- | With this enabled, only mods can manage tags, non-mods can still use them.|
+| **!tag prompt** | -- | -- | -- | Know how trying to create a tag that already exists asks you if you want to edit, or append? With this disabled (enabled by default) it will default to editing the tag |
+| **!tag claim** | -- | tagname | !tag claim realms | Claims a tag from a member who has left the server, only relevant if ownership is enabled |
+
 
 
 
@@ -122,7 +129,7 @@ Inspired by highlight bot, Carlbot now also does highlighting. Highlighting mean
 
 |Name|Aliases   |Args   |Example   |Usage
 |---|---|---|---|---|
-|!hl add   |+   |word   |!hl add carl    |Adds a word that will notify you. **IMPORTANT:** The bot tries to guess when you're aware of what's being typed and won't notify you if you've typed in the past 10 minutes, to see if your highlights work, please use `!hl match <sentence>`   |
+|!hl add   |+   |word(s)   |!hl add carl    |Adds a word that will notify you. **IMPORTANT:** The bot tries to guess when you're aware of what's being typed and won't notify you if you've typed in the past 10 minutes, to see if your highlights work, please use `!hl match <sentence>`. Additionally, when adding a multi-word highlight, it will check for a sequence of words, not a substring.   |
 |!hl match| m |Sentence | !hl match carl is cute | Tests a sentence and sees which if any words would notify you.
 |!hl block   |--   |member or channel   |!hl block @Kintark#0588   |Messages sent in this channel/from this user won't notify you.   |
 |!hl unblock   |--   | member or channel  | !hl unblock #general  | Unblocks the user/channel   |
@@ -131,7 +138,7 @@ Inspired by highlight bot, Carlbot now also does highlighting. Highlighting mean
 |!hl del   |--   | word  | !hl clear math  | Removes a word from your highlighted words  |
 
 ## Roles
-Very typo proof.
+Very typo proof. **Note** these are completely separate from the reaction roles and literally not a single setting carries over.
 
 |Name|Aliases   |Args   |Example   |Usage
 |---|---|---|---|---|
@@ -156,6 +163,7 @@ Very typo proof.
 |**!greet** | -- | text | !greet Welcome $mention, we've been expecting you| Sets up a welcome message that will be sent when a new user joins.
 |**!farewell** | -- | text | !farewell Goodbye $user, maybe it wasn't meant to be... |Like !greet but for people leaving
 |**!banmsg** |--|text | !banmsg **$user** just got blown the fuck out| Like !greet but for people getting banned
+|**!set dm** | pm/joindm/joinpm | text | !set dm Hello and welcome to $server, before chatting you need to assign roles in #get-roles | Like !greet except it dms the message to the user upon joining
 
 All these messages will be sent to the channel saved with `!set welcome`. Use a command without any text to remove the message. Supports the following variables:
 
