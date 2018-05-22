@@ -224,7 +224,7 @@ Also supports `#{random lists, separated by commas}` and `m{1 + 1} math blocks` 
 |!8ball   |--   |--   |!8ball will anyone ever love me?   |It's like any other 8ball command on discord. Annoying, useless and unreasonably popular.   |
 |!echo | -- | message | !echo #general Is this enough to pass the turing test? | Makes the bot say the message in the mentioned channel|
 |!poll | -- | question | !poll should I sleep? | Creates a yes/no poll where you vote with reactions|
-|!quickpoll | -- | question and answers | !quickpoll "best game?" wow overwatch "only losers play games" | Use double quotes for more than just one word. The first arg is the question, all after that are individual answers.
+|!quickpoll | -- | question and answers | !quickpoll best game?\| wow \| overwatch \| only losers play games | Use pipes `|` or commas to separate the questions and answers. The first arg is the question, all after that are individual answers. You can't mix pipes and commas, pipes are intended for polls where you want commas in the question or answer.
 |!speak | -- | [member] | !speak @Yenni#2794 |Uses [Markov chains](https://github.com/jsvine/markovify) to generate sentences based on what that person has said in the past.
 
 ## Starboard
