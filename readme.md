@@ -304,11 +304,20 @@ As of writing this, these blocks are:
 
 **Random lists** `#{comma, separated,#{nested args}}`
 
+**Unique random list variables** `#variablename{comma, separated, values}`
+
+Unlike random lists assigned to a variable through variable blocks, unique random lists randomly pick an element each time. This allows for some very nice commands, see the link at the bottom.
+
 **Math blocks** `m{1 + 1 / (3 ^ 9)}`
 
-**React blocks** `react{:regional_indicator_f:}`
+Supports relatively advanced math.
 
-   This will react to the post with the emojis placed inside the brackets
+`+ - * / ^ % sin cos tan exp abs trunc round sgn log ln log2`
+
+**React blocks** `react{:regional_indicator_f:}`
+`reactu{:regional_indicator_x:}`
+
+   This will react to the tag(react) or original message (reactu) with the emojis placed inside the brackets
    
    Unsure what this could be used for? `!tag create doubt react{:regional_indicator_x:} https://i.imgur.com/EacBuLR.png`
 
@@ -384,4 +393,4 @@ In addition to these blocks, it also comes with a few default arguments.  These 
 `$1 $2 $3 etc` - Like $args but only the first, second, third word etc. `!foo bar baz` means $1=bar
 
 
-Still not sure how to use this? [See this link for some interesting and funny tags people have created using TagScript](https://pastebin.com/raw/fbmZ5PjR)
+Still not sure how to use this? [See this link for some interesting and funny tags people have created using TagScript](https://pastebin.com/hXmtSpkF)
