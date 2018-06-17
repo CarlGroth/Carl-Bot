@@ -39,7 +39,10 @@ An alias is another way to call a command. For instance, `temp` and `weather` fu
 |**!rr remove**| rm del| role|!rr remove fortnite|Removes an emoji-reaction pair from the specified bot message (and more importantly, from the database)|
 |**!rr add**| create| message_id emoji role|!rr add 1238901239812 :angel: pure|Adds the emoji-role pair to the message and the database. **NOTE:** This message id can belong to other people than carlbot, and the same emoji can be used for different messages for different roles (useful for regional roles)|
 |**!rr color**|colour|message_id color|!rr color #00ee28|Changes the accent color of the specified  bot message|
+|**!rr addmany** |-- | message_id emoji role... | !rr addmany 1238901239812 :angel: pure :poop: fortnite :grin: league of legends | **SEPARATE EACH EMOJI-ROLE PAIR WITH A NEWLINE** Works like **!rr add** except it adds more than one role at a time |
+|**!rr unique** | -- | messge_id | !rr unique 123817349589 | Marks a message as 'unique' meaning a member can only claim one role from this message at a time, this works per message. Automatically removes the old reactions for you|
 
+ 
 You add roles to yourself by clicking on the reactions, you need manage server to make the reaction message and both you and the bot has to be able to assign the roles (it will warn you about this while creating it)
 
 To remove a bot message, simply delete the message like you would delete any other message, it's handled by the bot automatically.
@@ -51,11 +54,32 @@ To remove a bot message, simply delete the message like you would delete any oth
 |**!purge bot** | -- | prefix howmany | !purge ? 20 | Purges the bot messages (and messages with the specified prefix) from the last howmany messages.|
 |**!purge contains** | -- | substring | !purge thanos | Purges messages containing the substring |
 |**!purge user** | -- | user howmany | !purge @Carl#0001 20 | Purges messages from the user |
-|**!ban** | forceban hackban | member or ID | !ban 102130103012 | Bans the member from the server regardless if they're in the server or not |
+|**!purge all** | -- | howmany=100 | !purge all 13 | Purges the last howmany messages |
+|**!purge embeds** | -- | howmany=100 | !purge embeds 12 | Purges the last howmany messages with embeds |
+|**!purge emoji** | -- | howmany=100 | !purge emoji | Purges the last howmany messages containing custom emoji |
+|**!purge files** | -- | howmany=100 | !purge files | Purges messages with attachments |
+|**!purge images** | -- | howmany=100 | !purge images | Purges messages with attachments or embeds |
+|**!purge links** | -- | howmany=100 | !purge links | Purges messages with links |
+|**!purge reactions** | -- | howmany=100 | !purge reactions | Purges reactions from messages |
+|**!ban** | forceban hackban | member or ID [reason] | !ban 102130103012 raiding | Bans the member from the server. This works even if the member isn't on the server. If you supply a reason, it will show up in the modlogs and in discord's built in audit log |
 |**!muterole** | -- | Role | !muterole kids table | Selects a role to use for the mute command |
 |**!muterole create** | -- | [name] | !muterole create shhh | Creates a new role, adds the role as a channel override with "send messages" turned off for all text channels and sets it as the server's muterole.
-|**!mute** | -- | user [time] | !mute @Carl#0001 20h45m | Mutes a member (using the muterole, read above) for the specified time. If no time is given, it will mute indefinitely.|
+|**!mute** | -- | user [time [reason]] | !mute @Carl#0001 20h45m spamming | Mutes a member (using the muterole, read above) for the specified time. If no time is given, it will mute indefinitely. If a reason is given, it shows up in the mod logs.|
 |**!unmute** | -- | user | !unmute @Carl#0001 | Unmutes a member |
+|**!kick** | -- | user [reason] | !kick @Carl#0001 racism | Kicks a member. Reason shows up in the modlogs and in audit logs |
+|**!softban**| -- | user [reason] | !softban @Carl#0001 go away | Bans and immediately unbans a member to clear 48 hours of message history. |
+
+### Mod logs
+Useful for transparency and organizing.
+
+
+|Name|Aliases   |Args   |Example   |Usage
+|---|---|---|---|---|
+|**!modlog create** | -- | name | !modlog create auditlog | Creates a modlog where moderation actions will be logged.|
+|**!modlog set** | -- | #channel | !modlog set #modlog | Sets an already existing channel to send action to (make sure the bot has the permissions requried to post in the channel)|
+|**!modlog clear** | -- | -- | -- | Makes the bot stop logging actions to the channel|
+|**!modlog from** | -- | user | !modlog from @Carl#0001 | Retrieves all infractions for a member with the responsible moderator. |
+|**!reason** | -- | id reason | !reason 17 Spamming nazi imagery | Sets a reason for a modlog entry, useful for cases where you either banned manually or forgot to specify a reason |
 
 ## Logging
 
@@ -67,6 +91,8 @@ To remove a bot message, simply delete the message like you would delete any oth
 |**!set twitch**   |--   |channel   |!set twitch #couch   |Choose which channel the bot announces twitch streams to   |
 |**!set bot**   |--   | channel   |!set bot #bot-abuse   |Choose which channel restricted commands/tags go to   |
 |**!config**   |--   |--   |--   |Shows what the bot logs, what channels it doesn't log from, channels it ignores commands from, disabled commands, banned users, logging channel, twitch channel and prefixes   |
+|**!log embed** | -- | -- | -- | Toggles between the standard logs with embeds and the old text-based logging|
+|**!log discord**| -- | -- | -- | Toggles logging discord invites posted |
 |**!log avatar**  |--   |--   |--   |Sets logging avatar changes to true or false depending on what it currently is   |
 |**!log edit**  |--   |--   |--   |Sets logging message edits to true or false   |
 |**!log role**  |--   |--   |--   |Sets logging role updates to true or false   |
@@ -83,20 +109,25 @@ Carlbot offers exceptional tools to prevent abuse and restrict commands from tro
 
 |Name|Aliases   |Args   |Example   |Usage
 |---|---|---|---|---|
-|**!ignore**   |--   | [channel] [command] [subcommand]   |!ignore #general temp home   |If no channel is specified, the current channel is ignored. If no command is specified, the mentioned channel will be ignored. If only a command is supplied, the command and all of its subcommands will be ignored in the specified channel. If everything is supplied, only the subcommand will be ignored in the specified channel. Mod (manage server) will bypass all of these.   |
+|**!ignore**   |--   | [channel] [command] [subcommand]   |!ignore #general temp home   |If no channel is specified, the current channel is ignored. If only a command is supplied, the command and all of its subcommands will be ignored in the specified channel. If everything is supplied, only the subcommand will be ignored in the specified channel. Mod (manage server) will bypass all of these.   |
 |**!ignore server**   | --  |--   |--   | This will ignore all channels and is future-proof.    |
 |**!ignore all**   |--   |[command] [subcommand]   |!ignore all pc top   |This is equal to typing !ignore channel command subcommand in all channels the bot can see, useful if you want to ignore a command in all channels except for one. This will not work for channels created in the future. If the command is already ignored in a channel, this will unignore it.  |
+|**!unignore** | -- | [channel] [command] | !unignore #general temp | Reverses what !ignore does |
 |**!unignore all**   | --  | --   | --  | Unignores all channels (this does not take ignored commands into account)   |
 |**!disable**   |--   | command [subcommand]  | !disable pc top  |This really disables the command globally from the server, not even manage server bypasses this.    |
 |**!enable**   |--   |--   |!enable pc top   |Enables a previously disabled command.   |
 |**!enable all**   |--   |--   |--   |Sets all commands to enabled.   |
 |**!disable all**   |--   |--   |--   |Sets all commands to disabled.  |
+|**!enable mod** | -- | -- | -- | Enables all moderation commands |
+|**!disable mod** | -- | -- | -- | Disables all moderation commands |
 |!enable list | disable list | -- | -- | Shows all enabled/disabled commands.|
 |**!plonk**   |--   |member [command][subcommand]   |!plonk @Carl#0080 tag create   |This works almost exactly like !ignore but for users instead. If no command is specified, the user is banned from using the bot completely.   |
 |**!unplonk**  |--   |member [command][subcommand]    |!unplonk @Carl#0080   |Unbans the user from using the bot   |
 |!plonks   |--   |--   |--   |Displays all plonked users.   |
 |**!restrict**   |--   |command [subcommand]   |!restrict define   |This requires a bot channel to utilize. Makes it so that if the command is used outside of the bot channel, the bot will ping the user in the botchannel and give the results there instead.   |
 |**!unrestrict**   |--   |command [subcommand]   |!unrestrict d   | Unrestricts it. Like all commands where you pass in a command, aliases work just as well.   |
+|**!modonly** | -- | command | !modonly echo | Makes a command usable by mods only |
+|**!unmodonly** | -- | command | !unmodonly dog | Removes a command from the modonly list |
 |**!modrole** | -- | role | !modrole bot commander | Makes it so that any member with the specified role is seen as a moderator by the bot, this means being able to invoke any command in bold on this page. Only exception to this is the **!ban** command which still requires the member to be able to ban the target normally.
 
 ## Tags
@@ -129,7 +160,7 @@ Inspired by highlight bot, Carlbot now also does highlighting. Highlighting mean
 
 |Name|Aliases   |Args   |Example   |Usage
 |---|---|---|---|---|
-|!hl add   |+   |word(s)   |!hl add carl    |Adds a word that will notify you. **IMPORTANT:** The bot tries to guess when you're aware of what's being typed and won't notify you if you've typed in the past 10 minutes, to see if your highlights work, please use `!hl match <sentence>`. Additionally, when adding a multi-word highlight, it will check for a sequence of words, not a substring.   |
+|!hl add   |+   |word(s)   |!hl add carl    |Adds a word that will notify you. **IMPORTANT:** The bot tries to guess when you're aware of what's being typed and won't notify you if you've typed in the past 5 minutes, to see if your highlights work, please use `!hl match <sentence>`. Additionally, when adding a multi-word highlight, it will check for a sequence of words, not a substring.   |
 |!hl match| m |Sentence | !hl match carl is cute | Tests a sentence and sees which if any words would notify you.
 |!hl block   |--   |member or channel   |!hl block @Kintark#0588   |Messages sent in this channel/from this user won't notify you.   |
 |!hl unblock   |--   | member or channel  | !hl unblock #general  | Unblocks the user/channel   |
@@ -189,8 +220,11 @@ Also supports `#{random lists, separated by commas}` and `m{1 + 1} math blocks` 
 |---|---|---|---|---|
 | !rm  |reminder, remindme, timer   |time message OR message time   |!rm 1d23h pick up the next mission on your hunter. !rm set fire to the local orphanage tomorrow at noon.   | Sets up a reminder to send a message reminding you about the thing. If you use a human time like "at noon" it uses UTC.   |
 |!rm mine   |--   |--   |--   |Shows your reminders.   |
-|!rm clear   |del, delete, remove, purge, -   |--   |--   |Removes all of your reminders.   |
+|!rm del   | delete, remove, purge, -   | id   |--   |Removes the reminder with that id.   |
 |!sub   |!rm sub   | ID   |!sub 97   |Copies a reminder someone else made. This means you own the reminder, that person deleting their reminder will have no impact.   |
+|!rm clear | -- | -- | -- | Removes all your reminders from the server (or ALL if used in DMs) |
+|!rm repeat | -- | interval | !rm repeat 247 20d | Sets a timer to be repeated. |
+|!rm when | -- | id | !rm when 247 | Shows some information about a timer created in the server (or from you, if used in DMs)|
 
 ## Utilities
 
