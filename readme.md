@@ -70,7 +70,7 @@ To remove a bot message, simply delete the message like you would delete any oth
 |**!softban**| -- | user [reason] | !softban @Carl#0001 go away | Bans and immediately unbans a member to clear 48 hours of message history. |
 
 ### Mod logs
-Useful for transparency and organizing.
+[Useful for transparency and organizing](https://i.imgur.com/QXEG0Cr.png)
 
 
 |Name|Aliases   |Args   |Example   |Usage
