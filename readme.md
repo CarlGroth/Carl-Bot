@@ -185,10 +185,10 @@ Very typo proof. **Note** these are completely separate from the reaction roles 
 
 |Name|Aliases   |Args   |Example   |Usage
 |---|---|---|---|---|
-|!autorole | autoroles | -- | -- | Shows which roles will be added upon joining and if the bot will readd roles when someone leaves and rejoins the server
-|!autoroles readd | reassign |-- |-- | Turns reassigning roles on/off
-|!autorole add | -- | role | !autorole add peon | Autoroles are roles that are given to the user upon joining the server. |
-|!autorole remove | -- | role | !autorole remove admin | -//-|
+|**!autorole** | autoroles | -- | -- | Shows which roles will be added upon joining and if the bot will readd roles when someone leaves and rejoins the server
+|**!autoroles readd** | reassign |-- |-- | Turns reassigning roles on/off
+|**!autorole add** | -- | role | !autorole add peon | Autoroles are roles that are given to the user upon joining the server. |
+|**!autorole remove** | -- | role | !autorole remove admin | -//-|
 
 ## Welcome and Farewell messages
 |Name|Aliases   |Args   |Example   |Usage
