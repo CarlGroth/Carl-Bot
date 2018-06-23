@@ -43,6 +43,8 @@ An alias is another way to call a command. For instance, `temp` and `weather` fu
 |**!rr unique** | -- | messge_id | !rr unique 123817349589 | Marks a message as 'unique' meaning a member can only claim one role from this message at a time, this works per message. Automatically removes the old reactions for you|
 |**!rr link** | -- | base_message_id linked_message_id | !rr link 2389742349827 1239179273791283 | By linking two messages together, only one role from either message can be self-assigned. If you have 30 color roles for instance, linking the two messages together (since the limit is 20/message) allows a smooth, user-friendly experience when picking up roles. More than two messages can be linked together by using the same command a second time. |
 |**!rr unlink** | -- | message_id | !rr unlink 2389742349827 | This breaks apart the entire group created by `!rr link` This means if you had three messages linked together, none of them will be after using this command. |
+|**!rr aio** | -- | channel color "text \| description" emoji role | !rr aio #reaction eeaaee "hello there \| this is a description" :red: hello :purple: there | **SEPARATE EACH EMOJI-ROLE PAIR WITH A NEWLINE** This is meant for power users who wish to create everything with just one command. The title and description have to be enclosed in double quotes. |
+|**!rr aiou** | -- | -- | -- | Works like **!rr aio** but also marks the message as unique |
 
  
 You add roles to yourself by clicking on the reactions, you need manage server to make the reaction message and both you and the bot has to be able to assign the roles (it will warn you about this while creating it)
