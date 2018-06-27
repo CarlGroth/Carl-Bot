@@ -73,6 +73,17 @@ To remove a bot message, simply delete the message like you would delete any oth
 |**!kick** | -- | user [reason] | !kick @Carl#0001 racism | Kicks a member. Reason shows up in the modlogs and in audit logs |
 |**!softban**| -- | user [reason] | !softban @Carl#0001 go away | Bans and immediately unbans a member to clear 48 hours of message history. |
 
+### Anti-raid and mentionspam
+|Name|Aliases   |Args   |Example   |Usage
+|---|---|---|---|---|
+|**!mentionspam**   |-- | count   | !mentionspam 5  | Enables the bot to automatically punish mentionspammers. By default this action is banning, but it can be changed using the next command.  |
+|**!mentionspam action** | -- | action | !mentionspam action ban | Action is one of kick, mute, ban or delete. Delete just deletes the message, which is actually sort of counterproductive. |
+|**!mentionspam ignore** | -- | channels | !mentionspam ignore #announcement | Although mods are excluded from the mentionspam prevention, using this allows your members to spam mentions in certain channels, if you so desire. |
+|**!mentionspam unignore** | -- | channels | !mentionspam ignore #general #announcements | Undoes what **!mentionspam ignore** does. | 
+|**!raid basic** | -- | -- | -- | Basic antiraid. Sets verification level to table flip and deletes messages from members who joined less than 30 minutes ago. |
+|**!raid strict** | -- | -- | -- | Strict antiraid kicks members who joined less than 30 minutes ago whenever they send a message or join a voice channel. |
+|**!raid insane** | -- | -- | -- | Insane antiraid is strict but kicked members who rejoin will immediately be kicked. |
+
 ### Mod logs
 [Useful for transparency and organizing](https://i.imgur.com/QXEG0Cr.png)
 
