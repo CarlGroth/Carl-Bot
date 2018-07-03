@@ -166,6 +166,7 @@ Tags can be complicated, see [the full section](#tags-1) for a more thorough exp
 | **!tag modonly** | -- | -- | -- | With this enabled, only mods can manage tags, non-mods can still use them.|
 | **!tag prompt** | -- | -- | -- | Know how trying to create a tag that already exists asks you if you want to edit, or append? With this disabled (enabled by default) it will default to editing the tag |
 | **!tag claim** | -- | tagname | !tag claim realms | Claims a tag from a member who has left the server, only relevant if ownership is enabled |
+|**!tag sub** | replace s | tagname from_string to_string | !tag sub invite discord.gg/abc123 discord.gg/xyz999 | Replaces every occurance of from_string with to_string in an already existing tag. This can be extremely useful for expired invite links, slightly outdated information, or anything else that allows you to systematically correct your mistakes. |
 
 
 
@@ -240,6 +241,27 @@ Also supports `#{random lists, separated by commas}` and `m{1 + 1} math blocks` 
 |!rm clear | -- | -- | -- | Removes all your reminders from the server (or ALL if used in DMs) |
 |!rm repeat | -- | interval | !rm repeat 247 20d | Sets a timer to be repeated. |
 |!rm when | -- | id | !rm when 247 | Shows some information about a timer created in the server (or from you, if used in DMs)|
+
+## Feeds and timed/automatic feeds
+
+What are feeds? Feeds are a way for you to make announcements and ping a specific role without having to deal with the annoyances and potential abuse from either having a pingable role or manually toggling inbetween pingable and not. 
+
+Automatic feeds on the other hand can be seen as group reminders, and they share a lot of functionality with reminders.
+|Name|Aliases   |Args   |Example   |Usage
+|---|---|---|---|---|
+|**!feed**   | !feeds  |--   |--   |Lists all the feeds that have been set up in the server.   |
+|**!feed create**| --|name role |!feed create ffxiv final fantasy xiv|Creates a feed in the channel the command is used with with a specific name and a specific role that will be mentioned.|
+|**!feed announce**| !announce| name content... | !feed announce ffxiv Hey guys, patch 1.0.12 has been released |Makes an announcement to the specified feed. |
+|**!feed delete** | - del remove |name | !feed delete ffxiv | Deletes a feed. Note: This does not delete the associated role, so if you created one specifically for a feed, you need to delete it. |
+|**!feed clear** | -- |-- | -- | Deletes ALL feeds from the server. |
+|**!autofeed** | !autofeeds | -- | -- | Lists all autofeeds set up in the server. |
+|**!autofeed create**| -- | name role time message... | !autofeed create reset "final fantasy xiv" 18h The servers have been reset, get out there! | Normal autofeeds (the ones created by this command) will ping the role  specified when setting them up. |
+|**!autofeed silent** | -- | name time message... | !autofeed silent vote 2 hours Vote for carlbot on discord bots! | Like a normal autofeed except it does not have a role associated with it and thus, does not ping anything. |
+|**!autofeed silence** | -- | name | !autofeed silence reset | Silences an already existing normal feed. |
+|**!autofeed repeat** | -- | name duration | !autofeed repeat vote 24h | Marks an autofeed to be repeated. This keeps going until you delete the autofeed. |
+|**!autofeed remove** | -- | name | !autofeed remove vote | Removes an autofeed |
+|**!autofeed clear** | -- | -- | -- | Removes ALL autofeeds. |
+
 
 ## Utilities
 
