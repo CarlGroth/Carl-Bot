@@ -56,7 +56,7 @@ To remove a bot message, simply delete the message like you would delete any oth
 |---|---|---|---|---|
 |**!purge**   |-- | howmany   | !purge 200  | Purges the last howmany messages.   |
 |**!purge bot** | -- | prefix howmany | !purge ? 20 | Purges the bot messages (and messages with the specified prefix) from the last howmany messages.|
-|**!purge contains** | -- | substring | !purge thanos | Purges messages containing the substring |
+|**!purge contains** | -- | substring | !purge contains thanos | Purges messages containing the substring |
 |**!purge user** | -- | user howmany | !purge @Carl#0001 20 | Purges messages from the user |
 |**!purge all** | -- | howmany=100 | !purge all 13 | Purges the last howmany messages |
 |**!purge embeds** | -- | howmany=100 | !purge embeds 12 | Purges the last howmany messages with embeds |
