@@ -247,6 +247,7 @@ Also supports `#{random lists, separated by commas}` and `m{1 + 1} math blocks` 
 What are feeds? Feeds are a way for you to make announcements and ping a specific role without having to deal with the annoyances and potential abuse from either having a pingable role or manually toggling inbetween pingable and not. 
 
 Automatic feeds on the other hand can be seen as group reminders, and they share a lot of functionality with reminders.
+
 |Name|Aliases   |Args   |Example   |Usage
 |---|---|---|---|---|
 |**!feed**   | !feeds  |--   |--   |Lists all the feeds that have been set up in the server.   |
