@@ -9,3 +9,7 @@ For help and questions -> [Join the bot support server](https://discord.gg/DSg74
 # Commands
 
 For an explanation of the commands, please see the wiki at [https://github.com/CarlGroth/Carl-Bot/wiki](https://github.com/CarlGroth/Carl-Bot/wiki)
+
+# Self hosting
+
+Please don't. At least not now! The code is massively outdated and shares very little semblence with the live bot. This will most likely change in the future, but until then, please invite the version that I host.
