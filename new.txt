@@ -18,3 +18,5 @@ Add
 I added this to see how diff tool works 
 
 Changing this in branch 
+
+Changing master while there is a branch
