@@ -1,6 +1,7 @@
 [![Discord Bots](https://discordbots.org/api/widget/235148962103951360.svg)](https://discordbots.org/bot/235148962103951360)
 
-[Click me to invite Carl-bot to your server](https://discordapp.com/oauth2/authorize?client_id=235148962103951360&scope=bot&permissions=470150352)
+[Click me to invite Carl-bot to your server](
+Haha there's no read me 
 
 For help and questions -> [Join the bot support server](https://discord.gg/DSg744v)
 
@@ -13,3 +14,6 @@ For an explanation of the commands, please see the wiki at [https://github.com/C
 # Self hosting
 
 Please don't. At least not now! The code is massively outdated and shares very little semblence with the live bot. This will most likely change in the future, but until then, please invite the version that I host.
+
+
+This is work in progress so stashing 
