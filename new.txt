@@ -26,3 +26,6 @@ Section on master:
 I added this on master before conflcit 
 
 Adding something on master again 
+
+
+Addign this to another branch 
