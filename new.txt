@@ -24,3 +24,5 @@ Changing master while there is a branch
 Section on master:
 
 I added this on master before conflcit 
+
+Adding something on master again 
