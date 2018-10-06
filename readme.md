@@ -8,7 +8,7 @@ For help and questions -> [Join the bot support server](https://discord.gg/DSg74
 
 # Commands
 
-For an explanation of the commands, please see the wiki at [https://github.com/CarlGroth/Carl-Bot/wiki](https://github.com/CarlGroth/Carl-Bot/wiki)
+For an explanation of the commands, please see the wiki at [https://docs.carl.gg/](https://docs.carl.gg/)
 
 # Self hosting
 
