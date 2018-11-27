@@ -6,6 +6,10 @@ For help and questions -> [Join the bot support server](https://discord.gg/DSg74
 
 <a href="https://www.patreon.com/bePatron?u=11251319"><img alt="become a patron" src="https://c5.patreon.com/external/logo/become_a_patron_button.png" height="35px"></a>
 
+# Dashboard
+
+Configure the bot with an easy to use interface at [https://carl.gg](https://carl.gg)
+
 # Commands
 
 For an explanation of the commands, please see the wiki at [https://docs.carl.gg/](https://docs.carl.gg/)
