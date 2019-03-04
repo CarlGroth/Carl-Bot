@@ -1,4 +1,7 @@
 [![Discord Bots](https://discordbots.org/api/widget/235148962103951360.svg)](https://discordbots.org/bot/235148962103951360)
+[![Discord Bots](https://discordbotlist.com/bots/235148962103951360/widget)](https://discordbotlist.com/bots/235148962103951360)
+
+
 
 [Click me to invite Carl-bot to your server](https://discordapp.com/oauth2/authorize?client_id=235148962103951360&scope=bot&permissions=470150352)
 
