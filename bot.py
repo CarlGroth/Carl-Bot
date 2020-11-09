@@ -13,8 +13,7 @@ from discord.ext import commands
 
 
 INITIAL_EXTENSIONS = [
-    'cogs.admin',
-    'cogs.poll',
+    'cogs.admin
     'cogs.ping',
     'cogs.tags',
     'cogs.automod',
