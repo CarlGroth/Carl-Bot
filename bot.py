@@ -18,7 +18,6 @@ INITIAL_EXTENSIONS = [
     'cogs.ping',
     'cogs.tags',
     'cogs.automod',
-    'cogs.bio',
     'cogs.stats',
     'cogs.stattrak',
     'cogs.meta',
@@ -31,8 +30,6 @@ INITIAL_EXTENSIONS = [
     'cogs.nsfw',
     'cogs.reminders',
     'cogs.roles',
-    'cogs.stars',
-    'cogs.wolfram'
 ]
 
 
