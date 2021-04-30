@@ -33,12 +33,18 @@ class Mod:
         self.c.execute('''CREATE TABLE IF NOT EXISTS blacklist
              (guild_id text, word text)''')
         self.blacklist = {}
+        self.blacklist_expr = {}
         self.c.execute('''SELECT * FROM blacklist WHERE 1''')
         for server, word in self.c.fetchall():
             if server not in self.blacklist:
                 self.blacklist[server] = [word]
+                self.blacklist_expr[server] = [
+                        self.boundary_string(slugified_word)
+                        ]
             else:
                 self.blacklist[server].append(word)
+                self.blacklist_expr[server].append(self.boundary_string(slugified_word))
+
         self.bot.modroles = {}
         self.c.execute('''SELECT guild_id, mod_roles FROM config WHERE 1''')
         for server, modrole in self.c.fetchall():
@@ -190,6 +196,9 @@ class Mod:
         string = re.sub('#', '#\u200b', string)
         return string
 
+    def boundary_string(self, string):
+        return re.compile(r"\b" + re.escape(string) + r"\b")
+
     async def on_message_edit(self, before, after):
         if before.guild is None:
             return
@@ -200,9 +209,9 @@ class Mod:
             return
         msg = self.do_slugify(after.content)
         try:
-            if str(before.guild.id) in self.blacklist:
-                for blacklisted_word in self.blacklist[str(before.guild.id)]:
-                    if blacklisted_word in msg:
+            if str(before.guild.id) in self.blacklist_expr:
+                for pattern in self.blacklist_expr[str(before.guild.id)]:
+                    if pattern.search(msg):
                         try:
                             await before.delete()
                             return await before.author.send(f'''Your message "{before.content}" was removed for containing the blacklisted word "{blacklisted_word}"''')
@@ -223,9 +232,9 @@ class Mod:
             return
         msg = self.do_slugify(message.content)
         try:
-            if str(message.guild.id) in self.blacklist:
-                for blacklisted_word in self.blacklist[str(message.guild.id)]:
-                    if blacklisted_word in msg:
+            if str(message.guild.id) in self.blacklist_expr:
+                for pattern in self.blacklist_expr[str(message.guild.id)]:
+                    if pattern.search(msg):
                         try:
                             await message.delete()
                             return await message.author.send(f'''Your message "{message.content}" was removed for containing the blacklisted word "{blacklisted_word}"''')
@@ -253,10 +262,18 @@ class Mod:
                           VALUES (?, ?)''',
                           (ctx.guild.id, slugified_word))
         self.conn.commit()
+
+        expr = self.boundary_string(slugified_word)
+
         try:
             self.blacklist[str(ctx.guild.id)].append(slugified_word)
+
+            self.blacklist_expr[str(ctx.guild.id)].append(expr)
         except KeyError:
             self.blacklist[str(ctx.guild.id)] = [slugified_word]
+
+            self.blacklist_expr[str(ctx.guild.id)] = [expr]
+
         to_be_blacklisted = self.clean_string(to_be_blacklisted)
         await ctx.send(f'Added "{to_be_blacklisted}" to the blacklist')
     
@@ -271,7 +288,13 @@ class Mod:
         self.c.execute('''DELETE FROM blacklist WHERE (guild_id=? AND word=?)''',
                         (ctx.guild.id, slugified_word))
         self.conn.commit()
+
         self.blacklist[str(ctx.guild.id,)].remove(slugified_word)
+
+        self.blacklist_expr[str(ctx.guild.id,)].remove(
+                self.boundary_string(slugified_word)
+                )
+
         word = self.clean_string(word)
         await ctx.send(f'Removed "{word}" from the blacklist')
 
@@ -291,6 +314,7 @@ class Mod:
         self.c.execute('''DELETE FROM blacklist WHERE guild_id=?''',(ctx.guild.id,))
         self.conn.commit()
         self.blacklist[str(ctx.guild.id,)] = []
+        self.blacklist_expr[str(ctx.guild.id,)] = []
         await ctx.send("Removed all blacklisted words")
 
     
